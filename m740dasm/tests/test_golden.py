@@ -1,7 +1,10 @@
 """Output-stability (golden) test on a synthetic image.
 
-Freezes the listing for a fixed synthetic image so that incidental changes to
-the tool's output become visible in review.  Regenerate intentionally with:
+Freezes the listing for a small top-loaded synthetic image so that incidental
+changes to the tool's output become visible in review.  The image is kept
+small on purpose so the golden stays human-reviewable; the zero-page equate
+and reassembly paths are covered separately by test_roundtrip and the as740
+end-to-end tests.  Regenerate intentionally with:
     python -m m740dasm.tests.test_golden --update
 """
 
@@ -12,12 +15,11 @@ import unittest
 from m740dasm.tests import asmchain, fixtures
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-GOLDEN = os.path.join(HERE, "golden", "zeropage.asm")
+GOLDEN = os.path.join(HERE, "golden", "snapshot.asm")
 
 
 def _produce():
-    return asmchain.disasm_text(fixtures.zeropage_image(), device="M50734",
-                                start_address=0)
+    return asmchain.disasm_text(fixtures.snapshot_image(), device="M50734")
 
 
 class GoldenListingTests(unittest.TestCase):

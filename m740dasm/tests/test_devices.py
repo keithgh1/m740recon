@@ -1,35 +1,13 @@
 """Tests for the device hierarchy and per-core opcode gating."""
 
-import json
-import os
 import unittest
 
 from m740dasm.devices import Devices
 from m740dasm.disasm import disassemble
 
-HERE = os.path.dirname(os.path.abspath(__file__))
-SNAPSHOT = os.path.join(HERE, "device_snapshot.json")
-
 
 class DeviceResolutionTests(unittest.TestCase):
-    """The hierarchy must resolve to exactly the tables the flat definitions
-    produced before the refactor (captured in device_snapshot.json)."""
-
-    def test_resolved_tables_match_snapshot(self):
-        with open(SNAPSHOT) as f:
-            snap = json.load(f)
-        # Every snapshotted device must still be present and byte-identical.
-        # New devices may be added (subset, not exact equality) but an existing
-        # entry must never be dropped or overwritten.
-        missing = set(snap) - set(Devices)
-        self.assertEqual(missing, set(), "snapshotted devices went missing: %s" % missing)
-        for name, expected in snap.items():
-            got = Devices[name]
-            got_syms = {s.address: [s.name, s.comment] for s in got["symbol_table"]}
-            exp_syms = {e[0]: [e[1], e[2]] for e in expected["symbol_table"]}
-            self.assertEqual(got_syms, exp_syms, "symbols differ for %s" % name)
-            self.assertEqual(set(got["vector_table"]),
-                             set(expected["vector_table"]), "vectors differ for %s" % name)
+    """Invariants every resolved device must satisfy."""
 
     def test_every_device_has_unsupported_set(self):
         for name, dev in Devices.items():

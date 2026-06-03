@@ -14,12 +14,7 @@ import subprocess
 import tempfile
 import unittest
 
-from m740dasm.disasm import disassemble
-from m740dasm.trace import Tracer
-from m740dasm.memory import Memory
 from m740dasm.listing import Printer
-from m740dasm.symbols import SymbolTable
-from m740dasm.devices import Devices
 
 
 class ToolNotFound(Exception):

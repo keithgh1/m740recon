@@ -21,7 +21,9 @@ def _define(name, parent=None, vector_table=None, symbols=(),
         raise ValueError("device %r is already defined" % name)
     if parent is not None:
         base = _DEFS[parent]
-        vectors = vector_table if vector_table is not None else base["vectors"]
+        # copy, so siblings inheriting the same table never share a list object
+        vectors = (vector_table if vector_table is not None
+                   else list(base["vectors"]))
         by_addr = dict(base["by_addr"])
         unsupported = set(base["unsupported"])
     else:

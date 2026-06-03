@@ -4,14 +4,17 @@ The defining guarantee of m740dasm is that its listing reassembles to a
 bit-for-bit copy of the input.  as740 is the ultimate proof of that, but it is
 an external tool that is not always present.  This module provides a pure-Python
 proxy: it reconstructs the raw image from the classified Memory exactly the way
-the listing's bytes would, and checks that the classification tiles the whole
-address space with no gaps or overlaps and that every emitted unit's bytes match
-the original image.
+the listing's bytes would -- including unclassified (unknown) bytes, which the
+listing emits as ``.byte`` just like data -- and checks that every multi-byte
+unit is properly continued and that the reconstructed bytes match the original
+image.
 
 This catches the failure modes a disassembler can introduce on its own:
-mis-sized instructions, off-by-one data regions, table widths that don't divide
-their range, and addresses left uncovered.  Instruction *operand* encoding is
-covered separately by the per-opcode tests in test_disasm.py.
+mis-sized instructions, off-by-one data regions, and table widths that don't
+divide their range.  Because unknown bytes round-trip as ``.byte``, this proves
+byte fidelity, not that the tracer classified every byte -- code-discovery
+coverage is the job of the trace/analyze tests.  Instruction *operand* encoding
+is covered separately by the per-opcode tests in test_disasm.py.
 """
 
 from m740dasm.memory import LocationTypes
@@ -68,6 +71,9 @@ def reconstruct(memory):
             a = end
 
         elif t in (LocationTypes.Data, LocationTypes.Unknown):
+            # unknown bytes are emitted as .byte by the listing, exactly like
+            # data, so they reconstruct identically (byte fidelity -- not proof
+            # the tracer actually classified them)
             out[a] = memory[a]
             covered[a] = 1
             a += 1

@@ -32,6 +32,31 @@ def zeropage_image():
     return bytes(img)
 
 
+def snapshot_image():
+    """A small top-loaded ROM (loads just below 0x10000, like a real device
+    ROM) used to freeze the default listing for output stability.  Kept small
+    on purpose: it exercises instructions, zero-page equates, a named call
+    target, a few untyped data bytes and the interrupt vectors -- without the
+    64K of filler a full low-loaded image would emit."""
+    size = 0x20
+    base = 0x10000 - size                       # loads at 0xffe0
+
+    def put(addr, data):
+        img[addr - base:addr - base + len(data)] = bytes(data)
+
+    img = bytearray(size)
+    put(0xffe0, [
+        0xA5, 0x10,         # lda 0x10        zero page  -> mem_0010 equate
+        0x85, 0x11,         # sta 0x11        zero page  -> mem_0011 equate
+        0x20, 0xEC, 0xFF,   # jsr 0xffec      call target -> sub_ffec
+        0x60,               # rts
+    ])
+    put(0xffe8, [0xDE, 0xAD, 0xBE, 0xEF])       # untyped data bytes
+    put(0xffec, [0xA9, 0xAA, 0x60])             # sub_ffec: lda #0xAA ; rts
+    put(0xfffe, [0xE0, 0xFF])                   # reset vector -> 0xffe0
+    return bytes(img)
+
+
 def dispatch_image():
     """A 64K image with a [char, lo, hi] 0x00-terminated dispatch table whose
     handlers are reachable only through the table."""

@@ -23,7 +23,9 @@ import json
 from m740dasm.tables import FlowTypes
 
 _CALL_FLOWS = frozenset((FlowTypes.SubroutineCall,))
-_JUMP_FLOWS = frozenset((FlowTypes.UnconditionalJump, FlowTypes.ConditionalJump))
+# A tail call is an *unconditional* jump into another routine.  A conditional
+# branch may fall through, so it is not a tail call and is not reported as an edge.
+_TAILCALL_FLOWS = frozenset((FlowTypes.UnconditionalJump,))
 _INDIRECT_FLOWS = frozenset((FlowTypes.IndirectSubroutineCall,
                              FlowTypes.IndirectUnconditionalJump))
 
@@ -44,8 +46,7 @@ def build_model(memory, symbol_table, start_address, image_len, device=None):
     instructions = list(memory.iter_instructions())
 
     # Vectors, and the handler addresses they point at (routine roots).  Read
-    # the pointer little-endian (as the tracer and listing do); memory's
-    # get_vector() is big-endian and would byte-swap the target.
+    # the pointer little-endian (as the tracer and listing do).
     vectors = []
     vector_targets = set()
     for vaddr, _ in memory.iter_vectors():
@@ -106,7 +107,7 @@ def build_model(memory, symbol_table, start_address, image_len, device=None):
             continue
         if flow in _CALL_FLOWS:
             edges.append((caller, target, "call", addr))
-        elif flow in _JUMP_FLOWS and target in routines and target != caller:
+        elif flow in _TAILCALL_FLOWS and target in routines and target != caller:
             edges.append((caller, target, "tailcall", addr))
 
     for caller, target, etype, site in edges:

@@ -117,11 +117,14 @@ class ControlFile(object):
         pointer_addrs = []
         data_addrs = []
         syms = {}                       # target addr -> Symbol (first writer wins)
+        used_names = set()              # names already taken (must stay unique)
         for tbl in self.addr_tables:
             addr = tbl.start
             index = 0
             while addr + tbl.stride <= len(image):
-                if tbl.end is not None and addr >= tbl.end:
+                # require the whole entry to fit inside [start, end) so the
+                # pointer read below never crosses end into the next region
+                if tbl.end is not None and addr + tbl.stride > tbl.end:
                     break
                 if tbl.count is not None and index >= tbl.count:
                     break
@@ -133,9 +136,18 @@ class ControlFile(object):
                 for da in range(addr, addr + tbl.stride):
                     if da < ptr or da >= ptr + 2:
                         data_addrs.append(da)
-                if tbl.label_prefix:
+                if tbl.label_prefix and target not in syms:
+                    # two entries (here or in another table) can map different
+                    # targets to the same token; keep names unique so the
+                    # listing never emits a duplicate label that as740 rejects
                     name = tbl.label_prefix + _token(tbl, image[addr], index)
-                    syms.setdefault(target, Symbol(target, name, weak=False))
+                    unique = name
+                    suffix = 2
+                    while unique in used_names:
+                        unique = "%s_%d" % (name, suffix)
+                        suffix += 1
+                    used_names.add(unique)
+                    syms[target] = Symbol(target, unique, weak=False)
                 addr += tbl.stride
                 index += 1
         return pointer_addrs, data_addrs, list(syms.values())

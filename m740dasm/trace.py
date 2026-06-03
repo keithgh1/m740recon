@@ -13,6 +13,11 @@ class Tracer(object):
         self.readonly_ranges = list(readonly_ranges)
         # optional: enumerate ROM jump tables feeding computed jumps
         self.discover_tables = discover_tables
+        # targets already enqueued by analysis.  A target that cannot actually
+        # be decoded (e.g. it overlaps a previously decoded instruction) stays
+        # is_unknown forever; without this set it would be rediscovered on every
+        # pass and the analyze loop in trace() would never terminate.
+        self._analysis_seen = set()
 
         for address in entry_points:
             if address not in traceable_range:
@@ -114,7 +119,8 @@ class Tracer(object):
                     self.memory.annotate_call_target(target)
                 else:
                     self.memory.annotate_jump_target(target)
-                if self.memory.is_unknown(target):
+                if self.memory.is_unknown(target) and target not in self._analysis_seen:
+                    self._analysis_seen.add(target)
                     self.enqueue_address(target)
                     discovered.append(target)
             elif (target is None and self.discover_tables and
@@ -122,7 +128,8 @@ class Tracer(object):
                 for ptr_addr, tgt in self._detect_jump_table(inst, regs):
                     self.memory.annotate_jump_target(tgt)
                     table_pointers.append(ptr_addr)
-                    if self.memory.is_unknown(tgt):
+                    if self.memory.is_unknown(tgt) and tgt not in self._analysis_seen:
+                        self._analysis_seen.add(tgt)
                         self.enqueue_address(tgt)
                         discovered.append(tgt)
 
@@ -264,14 +271,20 @@ class Tracer(object):
             self.enqueue_processor_state(ps)
 
     def enqueue_vector(self, address):
-        if address in self.traceable_range:
-            self.memory.set_vector(address)
-            target = self.memory.read_word(address)
-            # TODO 0xFFFF can be replaced with a check for is unknown or is
-            # start of instruction, since 0xFFFF is the reset vector
-            if (target != 0xFFFF) and (target in self.traceable_range):
-                self.memory.annotate_jump_target(target)
-                self.enqueue_address(target)
+        if address not in self.traceable_range:
+            return
+        # respect a control-file range that already typed these two bytes as
+        # data/word/text: don't reclassify them as a vector or trace through them
+        if (not self.memory.is_vector_start(address) and
+                not self.memory.is_unknown(address, 2)):
+            return
+        self.memory.set_vector(address)
+        target = self.memory.read_word(address)
+        # TODO 0xFFFF can be replaced with a check for is unknown or is
+        # start of instruction, since 0xFFFF is the reset vector
+        if (target != 0xFFFF) and (target in self.traceable_range):
+            self.memory.annotate_jump_target(target)
+            self.enqueue_address(target)
 
     def mark_data_references(self):
         # mark addresses used in instruction data references as data

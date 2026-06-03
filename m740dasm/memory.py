@@ -65,8 +65,10 @@ class Memory(object):
         self.types[(address + 1) & 0xFFFF] = LocationTypes.VectorContinuation
 
     def get_vector(self, address):
-        high = self.contents[address]
-        low = self.contents[(address + 1) & 0xFFFF]
+        # little-endian, matching the 740 CPU and read_word(); this is the
+        # address the vector actually points at
+        low = self.contents[address]
+        high = self.contents[(address + 1) & 0xFFFF]
         return (high << 8) + low
 
     def iter_vectors(self, address=0):

@@ -54,19 +54,21 @@ class SymbolCreatingAnalyzerTests(unittest.TestCase):
         analyzer.analyze(mem)
         self.assertEqual(table._symbols_by_address, {}) # xxx add accessor
 
-    def test_analyze_doesnt_overwrite_code_exitableing_symbol(self):
+    def test_analyze_doesnt_overwrite_existing_code_symbol(self):
         table = symbols.SymbolTable()
         analyzer = symbols.SymbolCreatingAnalyzer(table)
         mem = memory.Memory(bytearray(0x10000))
-        mem.annotate_jump_target(0xF000)
-        mem.annotate_call_target(0xF000)
         intable = disasm.Instruction(location=0xF000, opcode=0x60,
                                   addr_mode=AddressModes.Implied)
-        exitableing_symbols = {0xf000: ('print', '')}
-        table = symbols.SymbolTable()
+        mem.set_instruction(0xF000, intable)
+        mem.annotate_jump_target(0xF000)
+        mem.annotate_call_target(0xF000)
+        # a user-provided (non-weak) symbol already names this code target
         table[0xf000] = symbols.Symbol(address=0xf000, name="print")
         analyzer.analyze(mem)
+        # analysis must keep the user symbol, not replace it with sub_f000
         self.assertEqual(table[0xf000].name, "print")
+        self.assertFalse(table[0xf000].weak)
 
 
 class DeviceSymbolTableTests(unittest.TestCase):

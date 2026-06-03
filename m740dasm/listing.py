@@ -66,8 +66,12 @@ class Printer(object):
     def print_symbols(self):
         used_symbols = set()
         for address, inst in self.memory.iter_instructions():
-            if inst.data_ref_address in self.symbol_table:
-                used_symbols.add(inst.data_ref_address)
+            # both data operands and branch/call targets may resolve to an
+            # equate (e.g. a zero-page or below-image address); collect both so
+            # such a symbol is always defined, never left as an undefined label
+            for ref in (inst.data_ref_address, inst.code_ref_address):
+                if ref in self.symbol_table:
+                    used_symbols.add(ref)
 
         for address, target in self.memory.iter_vectors():
             if target in self.symbol_table:

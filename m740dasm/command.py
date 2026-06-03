@@ -105,11 +105,14 @@ def control_args(cf, rom):
         addr_word_addrs=addr_word_addrs,
         text_ranges=text_ranges,
     )
-    # file-backed segments are read-only ROM; pointers in RAM segments are not
-    # trustworthy at disassembly time, so exclude them from analysis.
-    file_segments = [(s.start, s.end) for s in cf.segments if s.kind == "file"]
-    if file_segments:
-        kwargs["readonly_ranges"] = file_segments
+    # When a control file defines a memory map, only file-backed (ROM) segments
+    # are trustworthy for pointer analysis; pointers in zero/RAM segments are
+    # not.  Restrict readonly_ranges to the ROM segments -- possibly empty, so an
+    # all-RAM map trusts nothing -- rather than letting it default to the whole
+    # image.  (With no segments, the binary path's whole-image default applies.)
+    if cf.segments:
+        kwargs["readonly_ranges"] = [(s.start, s.end)
+                                     for s in cf.segments if s.kind == "file"]
     return kwargs
 
 
