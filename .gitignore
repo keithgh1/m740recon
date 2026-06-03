@@ -3,6 +3,7 @@ __pycache__/
 build/
 dist/
 env*/
+venv/
 htmlcov/
 *~
 *.pyc
@@ -11,6 +12,7 @@ htmlcov/
 .DS_Store
 .coverage
 .tox
+.pytest_cache/
 coverage.xml
 nosetests.xml
 out.*

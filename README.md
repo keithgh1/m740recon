@@ -4,15 +4,25 @@
 
 m740dasm is a disassembler for Mitsubishi 740 binaries that generates output compatible with the [as740](http://shop-pdp.net/ashtml/as740.htm) assembler.  It can be used to disassemble firmware for many 8-bit Mitsubishi microcontrollers.  The 16- and 32-bit Mitsubishi microcontrollers use different instruction sets and are not supported.
 
-m740dasm was developed to disassemble the firmware of the [Volkswagen Gamma V](https://github.com/mnaberez/vwradio) and [Volkswagen Rhapsody](https://github.com/mnaberez/vwradio) car radios made by TechniSat.  Both radios use the [M38869FFAHP](http://6502.org/documents/datasheets/mitsubishi/renesas_3886_group_users_manual.pdf) microcontroller.  
+m740dasm was developed to disassemble the firmware of the [Volkswagen Gamma V](https://github.com/mnaberez/vwradio) and [Volkswagen Rhapsody](https://github.com/mnaberez/vwradio) car radios made by TechniSat.  Both radios use the [M38869FFAHP](http://6502.org/documents/datasheets/mitsubishi/renesas_3886_group_users_manual.pdf) microcontroller.
 
 ## Features
 
- - Identical Reassembly.  The assembly language output of m740dasm will assemble to a bit-for-bit exact copy of the original binary using as740.  This has been tested using several real firmware binaries and by fuzzing.
+ - **Identical reassembly.**  The assembly output of m740dasm assembles to a bit-for-bit exact copy of the original binary using as740.  A pure-Python structural round-trip verifies the same property without an external assembler.
 
- - Code / Data Separation.  Starting from the vectors at the top of memory, m740dasm uses recursive traversal disassembly to separate code from data. This automates much of the disassembly process but indirect jumps will still need to be resolved manually.
+ - **Code / data separation.**  Starting from the vectors at the top of memory, m740dasm uses recursive-traversal disassembly to separate code from data.
 
- - Symbol Generation.  m740dasm tries not to write hardcoded addresses in the output when possible.  It will automatically add symbols for hardware registers and vectors, other memory locations used, and will add labels for branches and subroutines.
+ - **Symbol generation.**  Hardware registers, vectors, referenced memory locations, branch labels, and subroutines are named automatically instead of writing hardcoded addresses.
+
+ - **Declarative control files (`-c`).**  A da65-style control file supplies the device, entry points, labels/comments, a segment memory map, typed data ranges (`byte`/`word`/`addr`/`text`), and address-tables that decode dispatch tables into named handlers — instead of editing source.
+
+ - **Device hierarchy (`-m`).**  Devices are defined as a base/group/part inheritance hierarchy in `devices.py`, covering the M37450/51, M3802/07/3886, M50734, and many other 740-family parts plus aliases.  Each core may also gate opcodes it does not implement (decoded as data).
+
+ - **Value-tracking analysis (`-a`, `--auto-tables`).**  Optional constant-propagation resolves computed `jmp [zp]` / `jsr [zp]` targets; `--auto-tables` enumerates contiguous ROM jump tables that feed them.  Both are additive and reassembly-safe.
+
+ - **Cross-references (`-x`).**  Annotates each label with the instructions that reference it.
+
+ - **Reports (`-j`, `-g`).**  Emits a machine-readable JSON model or a human-readable call graph instead of the listing (see [Reports and visualization](#reports-and-visualization)).
 
 ## Installation
 
@@ -36,11 +46,70 @@ m740dasm accepts a plain binary file as input.  The file is assumed to be a ROM 
 $ ./venv/bin/m740dasm input.bin > output.asm
 ```
 
-The default MCU type is the `M3886` series.  Other types may be specified with the `-m` option, e.g. `-m M37450`.  Assuming the package was installed with `--editable` as shown above, you can add support for new devices by editing `devices.py`.
+The default MCU type is the `M3886` series.  Other types may be specified with the `-m` option, e.g. `-m M37450` or `-m M50734`.  You can add support for new devices by editing `devices.py`.
 
-Most binaries will include some computed jumps, which m740dasm can't resolve on its own.  You can inform the disassembler of addresses containing code by adding them to the [`entry_points`](https://github.com/mnaberez/m740dasm/blob/9dd273a5230fcc265188e145cbda54c8db8afb29/m740dasm/command.py#L51-L52) list in `command.py`.
+For anything beyond a single top-aligned ROM — a RAM/ROM split, additional entry points, dispatch tables, or data regions — supply a control file with `-c` instead of editing source.  A control file gives the device, a segment memory map, entry points, labels and comments, typed data ranges, and address-tables that decode dispatch tables into named handlers:
 
-Once disassembled, the output file can be re-assembled to an identical binary using [as740](http://shop-pdp.net/ashtml/as740.htm).  A sample [`Makefile`](https://github.com/mnaberez/m740dasm/blob/bbf8d3f541e28c48cb05fe2fa6acc8fd8e1304fa/m740dasm/tests/end_to_end/Makefile) is included in this repository that shows the required as740 commands.
+```
+$ ./venv/bin/m740dasm -c firmware.m740 > output.asm        # device + memory map + labels
+$ ./venv/bin/m740dasm -c firmware.m740 -a -x > output.asm  # + analysis + xrefs
+```
+
+Most binaries include some computed jumps.  `-a`/`--analyze` tracks register and zero-page values to resolve `jmp [zp]` / `jsr [zp]` targets, and `--auto-tables` enumerates the ROM jump tables that feed them.  Addresses that still can't be resolved automatically can be named directly in the control file.
+
+Once disassembled, the output file can be re-assembled to an identical binary using [as740](http://shop-pdp.net/ashtml/as740.htm).  A sample [`Makefile`](m740dasm/tests/end_to_end/Makefile) is included that shows the required as740 commands.
+
+### Reports and visualization
+
+In addition to the assembly listing, m740dasm can emit two reports derived from the traced program.  Both read only already-traced state and print to stdout in place of the listing:
+
+```
+$ ./venv/bin/m740dasm -c firmware.m740 --call-graph > callgraph.txt   # human-readable
+$ ./venv/bin/m740dasm -c firmware.m740 --json       > report.json     # machine-readable
+```
+
+`--call-graph` lists each routine with the routines it calls and the routines that call it.  `--json` writes a structured model (`m740dasm-report/1`): routines, call edges, vectors, symbols, and a full cross-reference map.
+
+The JSON model renders into a [Graphviz](https://graphviz.org/) diagram.  A full firmware graph is usually too large to read, so filter to a routine of interest — for example, everything reachable from one routine, two levels deep:
+
+```python
+# report_to_dot.py: turn `m740dasm --json` output into Graphviz
+import json, sys
+model = json.load(open(sys.argv[1]))
+routines = {r["address"]: r for r in model["routines"]}
+by_name = {r["name"]: r["address"] for r in model["routines"]}
+root = by_name[sys.argv[2]]
+depth = int(sys.argv[3]) if len(sys.argv) > 3 else 2
+
+seen, frontier = set(), {root}
+for _ in range(depth + 1):
+    seen |= frontier
+    frontier = {e["to"] for a in frontier if a in routines
+                for e in routines[a]["calls"]} - seen
+
+print("digraph g {\n  rankdir=LR;\n  node [shape=box, fontname=Helvetica];")
+for a in seen:
+    for e in routines.get(a, {}).get("calls", []):
+        if e["to"] in seen:
+            dash = "" if e["type"] == "call" else " [style=dashed]"
+            print('  "%s" -> "%s"%s;' % (routines[a]["name"], e["name"], dash))
+print("}")
+```
+
+```
+$ ./venv/bin/m740dasm -c firmware.m740 --json > report.json
+$ python report_to_dot.py report.json main_loop 2 | dot -Tsvg -o callgraph.svg
+```
+
+## Testing
+
+```
+$ ./venv/bin/pytest
+```
+
+The suite is self-contained: every input is a synthetic fixture or the repository's own `testprog.asm`, so no external ROM image is required.
+
+The end-to-end reassembly tests use the real [as740](http://shop-pdp.net/ashtml/as740.htm) + aslink to prove the listing assembles bit-for-bit back to the input.  When that toolchain is not found on `PATH` (or in `~/bin`) those tests **skip** and the rest of the suite still passes — the pure-Python structural round-trip (`test_roundtrip`) keeps re-encoding verified in the meantime.  Set `M740_REQUIRE_AS740=1` to turn a missing toolchain into a hard failure instead (recommended for CI that must never let the reassembly guarantee go unverified).  To run the full check locally, build `as740` and `aslink` from the ASxxxx source and put them on `PATH`.
 
 ## Author
 
