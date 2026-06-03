@@ -19,6 +19,13 @@ class SymbolTable(object):
     def __setitem__(self, address, symbol):
         self._symbols_by_address[address] = symbol
 
+    def __iter__(self):
+        return iter(sorted(self._symbols_by_address))
+
+    def items(self):
+        """(address, Symbol) pairs in ascending address order."""
+        return [(a, self._symbols_by_address[a]) for a in self]
+
     def analyze_symbols(self, memory):
         SymbolCreatingAnalyzer(self).analyze(memory)
 

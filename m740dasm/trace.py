@@ -1,12 +1,18 @@
 import os
 from operator import attrgetter
-from m740dasm.tables import FlowTypes
+from m740dasm.tables import AddressModes, FlowTypes
 
 class Tracer(object):
-    def __init__(self, memory, entry_points, vectors, traceable_range):
+    def __init__(self, memory, entry_points, vectors, traceable_range,
+                 analyze=False, readonly_ranges=(), discover_tables=False):
         self.memory = memory
         self.traceable_range = traceable_range
         self.queue = TraceQueue()
+        # optional value-tracking analysis: resolve computed jumps/calls
+        self.analyze = analyze
+        self.readonly_ranges = list(readonly_ranges)
+        # optional: enumerate ROM jump tables feeding computed jumps
+        self.discover_tables = discover_tables
 
         for address in entry_points:
             if address not in traceable_range:
@@ -22,6 +28,20 @@ class Tracer(object):
             self.enqueue_vector(address)
 
     def trace(self, disassemble_func):
+        self._run_queue(disassemble_func)
+        if self.analyze:
+            # Iterate: a value-propagation pass over the discovered code may
+            # resolve indirect jumps to new code, which is then decoded and may
+            # itself contain more indirect jumps.  Each round adds >=1 target,
+            # so this terminates.
+            while True:
+                discovered = self._analyze_pass()
+                if not discovered:
+                    break
+                self._run_queue(disassemble_func)
+        self.mark_data_references()
+
+    def _run_queue(self, disassemble_func):
         mem_len = len(self.memory)
 
         while len(self.queue):
@@ -55,7 +75,113 @@ class Tracer(object):
                 handler = self._generic_handlers[inst.flow_type]
             handler(self, inst, ps, new_ps)
 
-        self.mark_data_references()
+    # ---- value-tracking analysis (opt-in) --------------------------------
+
+    def _is_readonly(self, address):
+        for start, end in self.readonly_ranges:
+            if start <= address < end:
+                return True
+        return False
+
+    def _analyze_pass(self):
+        """Walk the discovered code in address order tracking block-local
+        constant register / zero-page values, and resolve indirect jumps and
+        calls.  Returns the list of newly discovered (and now enqueued) code
+        targets.
+
+        Soundness: register/zp values are only carried across a straight-line
+        fallthrough from the immediately preceding instruction, and are reset
+        at any block leader (jump/call target / entry point) and after any
+        call.  A value is therefore used only when it is provably constant on
+        the path reaching the indirect branch, so a resolved target is always
+        real code (never data).
+        """
+        regs = _Regs()
+        prev_falls_through = False
+        discovered = []
+        table_pointers = []
+        for address, inst in list(self.memory.iter_instructions()):
+            leader = (self.memory.is_jump_target(address) or
+                      self.memory.is_call_target(address) or
+                      self.memory.is_entry_point(address))
+            if leader or not prev_falls_through:
+                regs = _Regs()
+
+            target = self._resolve_indirect(inst, regs)
+            if target is not None and target in self.traceable_range:
+                is_call = inst.flow_type == FlowTypes.IndirectSubroutineCall
+                if is_call:
+                    self.memory.annotate_call_target(target)
+                else:
+                    self.memory.annotate_jump_target(target)
+                if self.memory.is_unknown(target):
+                    self.enqueue_address(target)
+                    discovered.append(target)
+            elif (target is None and self.discover_tables and
+                  inst.addr_mode == AddressModes.ZeroPageIndirect):
+                for ptr_addr, tgt in self._detect_jump_table(inst, regs):
+                    self.memory.annotate_jump_target(tgt)
+                    table_pointers.append(ptr_addr)
+                    if self.memory.is_unknown(tgt):
+                        self.enqueue_address(tgt)
+                        discovered.append(tgt)
+
+            regs = _apply_effects(inst, regs)
+            prev_falls_through = inst.flow_type in (
+                FlowTypes.Continue, FlowTypes.ConditionalJump,
+                FlowTypes.SubroutineCall, FlowTypes.IndirectSubroutineCall)
+
+        # mark each table pointer so it renders as a .word once the loop over
+        # decoded instructions is finished (avoids mutating during iteration)
+        for ptr_addr in table_pointers:
+            if (self.memory.is_unknown(ptr_addr) and
+                    self.memory.is_unknown((ptr_addr + 1) & 0xFFFF)):
+                self.memory.set_vector(ptr_addr)
+        return discovered
+
+    _TABLE_CAP = 256
+
+    def _detect_jump_table(self, inst, regs):
+        """If the jmp/jsr [zp] pointer was loaded from a contiguous [lo,hi]
+        table in ROM, enumerate plausible entries and return (ptr_addr, target)
+        pairs.  Conservative: every entry must be a readonly, in-range, non-null
+        pointer, and at least two entries must qualify."""
+        zp = inst.zp_addr
+        lo_src = regs.zp_src.get(zp)
+        hi_src = regs.zp_src.get((zp + 1) & 0xFF)
+        if not (lo_src and hi_src):
+            return []
+        if lo_src[0] != 'idx' or hi_src[0] != 'idx' or lo_src[2] != hi_src[2]:
+            return []
+        base, base_hi = lo_src[1], hi_src[1]
+        if base_hi != (base + 1) & 0xFFFF:        # contiguous lo,hi,lo,hi,...
+            return []
+        entries = []
+        for i in range(self._TABLE_CAP):
+            ptr = (base + 2 * i) & 0xFFFF
+            if not (self._is_readonly(ptr) and self._is_readonly((ptr + 1) & 0xFFFF)):
+                break
+            tgt = self.memory[ptr] | (self.memory[(ptr + 1) & 0xFFFF] << 8)
+            if tgt not in self.traceable_range or tgt in (0x0000, 0xFFFF):
+                break
+            entries.append((ptr, tgt))
+        return entries if len(entries) >= 2 else []
+
+    def _resolve_indirect(self, inst, regs):
+        """Return the target of an indirect jump/call if statically known."""
+        am = inst.addr_mode
+        if am == AddressModes.IndirectAbsolute:           # jmp [abs]
+            ptr = inst.abs_addr
+            if self._is_readonly(ptr) and self._is_readonly((ptr + 1) & 0xFFFF):
+                return self.memory[ptr] | (self.memory[(ptr + 1) & 0xFFFF] << 8)
+            return None
+        if am == AddressModes.ZeroPageIndirect:           # jmp [zp] / jsr [zp]
+            lo = regs.zp.get(inst.zp_addr)
+            hi = regs.zp.get((inst.zp_addr + 1) & 0xFF)
+            if lo is not None and hi is not None:
+                return lo | (hi << 8)
+            return None
+        return None
 
     def _log(self, inst, ps):
         print("TRACE " + str(ps).ljust(24) + str(inst))
@@ -166,6 +292,107 @@ class Tracer(object):
                     next_address = (address + 1) & 0xFFFF
                     if self.memory.is_unknown(next_address):
                         self.memory.set_data(next_address)
+
+
+_ZP_MODES = frozenset((
+    AddressModes.ZeroPage, AddressModes.ZeroPageX, AddressModes.ZeroPageY,
+    AddressModes.IndirectX, AddressModes.IndirectY, AddressModes.ZeroPageIndirect,
+    AddressModes.ZeroPageBit, AddressModes.ZeroPageBitRelative,
+    AddressModes.ZeroPageImmediate,
+))
+
+# implied instructions that provably do not change A/X/Y (flag ops, nop, flow)
+_PRESERVES_REGS = frozenset((
+    'clc', 'sec', 'cld', 'sed', 'clv', 'cli', 'sei', 'clt', 'set',
+    'nop', 'brk', 'rti', 'rts',
+))
+
+
+class _Regs(object):
+    '''Abstract machine state.  Each of A/X/Y and each tracked zero-page byte
+    is a known int or None (unknown).  The parallel *_src / zp_src fields carry
+    provenance: ('idx', base, reg) marks a byte loaded from an indexed table
+    base,reg -- used to recognize computed jump tables.'''
+    __slots__ = ('a', 'x', 'y', 'zp', 'a_src', 'x_src', 'y_src', 'zp_src')
+
+    def __init__(self):
+        self.a = None
+        self.x = None
+        self.y = None
+        self.zp = {}
+        self.a_src = None
+        self.x_src = None
+        self.y_src = None
+        self.zp_src = {}
+
+
+def _load_value_and_src(inst, regs):
+    """Return (value, src) a load instruction places into its register."""
+    am = inst.addr_mode
+    if am == AddressModes.Immediate:
+        return inst.immediate, None
+    if am == AddressModes.ZeroPage:
+        return regs.zp.get(inst.zp_addr), regs.zp_src.get(inst.zp_addr)
+    if am == AddressModes.AbsoluteX:
+        return None, ('idx', inst.abs_addr, 'x')
+    if am == AddressModes.AbsoluteY:
+        return None, ('idx', inst.abs_addr, 'y')
+    return None, None
+
+
+def _apply_effects(inst, regs):
+    '''Transfer function over _Regs for one instruction.  Conservative: any
+    effect not explicitly modeled forgets the affected register(s) / the zero
+    page, so a tracked value is only ever a proven constant.'''
+    flow = inst.flow_type
+    if flow in (FlowTypes.SubroutineCall, FlowTypes.IndirectSubroutineCall):
+        return _Regs()                       # callee may clobber everything
+    mnemonic = inst.disasm_template.split(' ', 1)[0]
+    am = inst.addr_mode
+    if mnemonic == 'lda':
+        regs.a, regs.a_src = _load_value_and_src(inst, regs)
+    elif mnemonic == 'ldx':
+        regs.x, regs.x_src = _load_value_and_src(inst, regs)
+    elif mnemonic == 'ldy':
+        regs.y, regs.y_src = _load_value_and_src(inst, regs)
+    elif mnemonic == 'sta':
+        if am == AddressModes.ZeroPage:
+            regs.zp[inst.zp_addr] = regs.a
+            regs.zp_src[inst.zp_addr] = regs.a_src
+        elif am in _ZP_MODES:
+            regs.zp = {}
+            regs.zp_src = {}
+    elif mnemonic == 'stx':
+        if am == AddressModes.ZeroPage:
+            regs.zp[inst.zp_addr] = regs.x
+            regs.zp_src[inst.zp_addr] = regs.x_src
+        elif am in _ZP_MODES:
+            regs.zp = {}
+            regs.zp_src = {}
+    elif mnemonic == 'sty':
+        if am == AddressModes.ZeroPage:
+            regs.zp[inst.zp_addr] = regs.y
+            regs.zp_src[inst.zp_addr] = regs.y_src
+        elif am in _ZP_MODES:
+            regs.zp = {}
+            regs.zp_src = {}
+    elif mnemonic == 'tax':
+        regs.x, regs.x_src = regs.a, regs.a_src
+    elif mnemonic == 'tay':
+        regs.y, regs.y_src = regs.a, regs.a_src
+    elif mnemonic == 'txa':
+        regs.a, regs.a_src = regs.x, regs.x_src
+    elif mnemonic == 'tya':
+        regs.a, regs.a_src = regs.y, regs.y_src
+    elif mnemonic in _PRESERVES_REGS:
+        pass
+    else:
+        regs.a = regs.x = regs.y = None
+        regs.a_src = regs.x_src = regs.y_src = None
+        if am in _ZP_MODES:
+            regs.zp = {}
+            regs.zp_src = {}
+    return regs
 
 
 class TraceQueue(object):

@@ -79,6 +79,15 @@ class Memory(object):
     def set_data(self, address):
         self.types[address] = LocationTypes.Data
 
+    def set_word(self, address):
+        self.types[address] = LocationTypes.WordStart
+        self.types[(address + 1) & 0xFFFF] = LocationTypes.WordContinuation
+
+    def set_text(self, start, end):
+        self.types[start] = LocationTypes.TextStart
+        for a in range(start + 1, end):
+            self.types[a & 0xFFFF] = LocationTypes.TextContinuation
+
     # Location Types
 
     def is_unknown(self, address, length=1):
@@ -102,6 +111,15 @@ class Memory(object):
     def is_vector_continuation(self, address):
         return self.types[address] == LocationTypes.VectorContinuation
 
+    def is_word_start(self, address):
+        return self.types[address] == LocationTypes.WordStart
+
+    def is_text_start(self, address):
+        return self.types[address] == LocationTypes.TextStart
+
+    def is_text_continuation(self, address):
+        return self.types[address] == LocationTypes.TextContinuation
+
     # Location Types (single- or multi-byte inquiry)
 
     def is_single_byte_or_start_of_multibyte(self, address):
@@ -111,6 +129,8 @@ class Memory(object):
         return self.types[address] in (
             LocationTypes.InstructionContinuation,
             LocationTypes.VectorContinuation,
+            LocationTypes.WordContinuation,
+            LocationTypes.TextContinuation,
             )
 
     # Location Annotations
@@ -142,6 +162,10 @@ class LocationTypes(object):
     InstructionContinuation = 3
     VectorStart = 4
     VectorContinuation = 5
+    WordStart = 6
+    WordContinuation = 7
+    TextStart = 8
+    TextContinuation = 9
 
 
 class LocationAnnotations(object):
