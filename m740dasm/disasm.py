@@ -2,11 +2,17 @@ from m740dasm.tables import (
     AddressModes,
     FlowTypes,
     InstructionLengths,
+    Opcode,
     Opcodes,
     )
 
-def disassemble(memory, pc):
-    return Instruction.disassemble(memory, pc)
+def disassemble(memory, pc, unsupported=frozenset()):
+    return Instruction.disassemble(memory, pc, unsupported)
+
+# Opcode used in place of one the selected core does not implement.
+def _illegal_opcode(number):
+    return Opcode(number=number, disasm_template=".byte {opc}",
+                  addr_mode=AddressModes.Illegal, flow_type=FlowTypes.Stop)
 
 class Instruction(object):
     __slots__ = ('disasm_template', 'location', 'addr_mode', 'opcode', 'operands',
@@ -14,10 +20,12 @@ class Instruction(object):
                  'flow_type')
 
     @classmethod
-    def disassemble(klass, memory, pc):
+    def disassemble(klass, memory, pc, unsupported=frozenset()):
         """Disassemble the instruction in memory at pc and return
-        an Instruction instance for it."""
-        opcode = Opcodes[memory[pc]]
+        an Instruction instance for it.  Opcodes in `unsupported` (opcodes the
+        selected core does not implement) are decoded as data."""
+        byte = memory[pc]
+        opcode = _illegal_opcode(byte) if byte in unsupported else Opcodes[byte]
         pc = (pc + 1) & 0xFFFF
 
         instlen = InstructionLengths[opcode.addr_mode]

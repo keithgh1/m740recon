@@ -1,6 +1,7 @@
 import re
 import unittest
 from m740dasm import symbols, memory, disasm
+from m740dasm.devices import Devices
 from m740dasm.tables import AddressModes
 
 class SymbolCreatingAnalyzerTests(unittest.TestCase):
@@ -68,33 +69,53 @@ class SymbolCreatingAnalyzerTests(unittest.TestCase):
         self.assertEqual(table[0xf000].name, "print")
 
 
-class ListsOfSymbolsTests(unittest.TestCase):
-    _NAMES_OF_LISTS = tuple([s for s in dir(symbols) if s.endswith('_SYMBOLS')])
+class DeviceSymbolTableTests(unittest.TestCase):
+    """Validate the per-device symbol tables in devices.py.
+
+    The symbol data moved from module-level ``*_SYMBOLS`` lists in symbols.py
+    into ``Devices[...]['symbol_table']``; the original tests scanned the old
+    location and so validated nothing.  These iterate the real tables.
+    """
+
+    _AS740_NAME = re.compile(r'\A[a-z\.\$_]{1}[\da-z\.\$_]{0,78}\Z', re.IGNORECASE)
+
+    def _tables(self):
+        # devices alias shared table objects; de-dupe scans by identity
+        unique = {}
+        for name, dev in Devices.items():
+            tbl = dev["symbol_table"]
+            unique[id(tbl)] = (name, tbl)
+        return list(unique.values())
 
     def test_addresses_are_in_range(self):
-        for litable_name in self._NAMES_OF_LISTS:
-            for s in getattr(symbols, litable_name):
-                manalyzer = "Address %r out of range in %r" % (s.address, litable_name)
-                self.assertTrue((s.address >= 0) and (s.address <= 0xFFFF), manalyzer)
+        for name, tbl in self._tables():
+            for s in tbl:
+                self.assertTrue(0 <= s.address <= 0xFFFF,
+                                "address 0x%x out of range in %s" % (s.address, name))
 
-    def test_each_address_has_symbol_name_and_comment(self):
-        for litable_name in self._NAMES_OF_LISTS:
-            for s in getattr(symbols, litable_name):
-                manalyzer = "Address %r bad value in %r" % (s.address, litable_name)
-                self.assertTrue(len(s.name) > 1)
+    def test_each_symbol_has_name_and_comment(self):
+        for name, tbl in self._tables():
+            for s in tbl:
+                self.assertTrue(len(s.name) > 1, "short name %r in %s" % (s.name, name))
                 self.assertTrue(hasattr(s, "comment"))
 
     def test_symbol_names_never_repeat(self):
-        for litable_name in self._NAMES_OF_LISTS:
-            names_seen = set()
-            for s in getattr(symbols, litable_name):
-                manalyzer = "Symbol name %r repeats in %r" % (s.name, litable_name)
-                self.assertTrue((s.name not in names_seen), manalyzer)
-                names_seen.add(s.name)
+        for name, tbl in self._tables():
+            seen = set()
+            for s in tbl:
+                self.assertNotIn(s.name, seen, "name %r repeats in %s" % (s.name, name))
+                seen.add(s.name)
+
+    def test_symbol_addresses_never_repeat(self):
+        for name, tbl in self._tables():
+            seen = set()
+            for s in tbl:
+                self.assertNotIn(s.address, seen,
+                                 "address 0x%x repeats in %s" % (s.address, name))
+                seen.add(s.address)
 
     def test_symbol_names_are_legal_for_as740(self):
-        pat = re.compile(r'\A[a-z\.\$_]{1}[\da-z\.\$_]{0,78}\Z', re.IGNORECASE)
-        for litable_name in self._NAMES_OF_LISTS:
-            for s in getattr(symbols, litable_name):
-                manalyzer = "Symbol name %r not valid in %r" % (s.name, litable_name)
-                self.assertTrue(pat.match(s.name), manalyzer)
+        for name, tbl in self._tables():
+            for s in tbl:
+                self.assertTrue(self._AS740_NAME.match(s.name),
+                                "name %r not valid for as740 in %s" % (s.name, name))

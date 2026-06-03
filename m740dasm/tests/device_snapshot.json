@@ -1,0 +1,3008 @@
+{
+"50734": {
+"symbol_table": [
+[
+218,
+"TXL",
+"Timer X (lower byte)"
+],
+[
+219,
+"TXH",
+"Timer X (higher byte)"
+],
+[
+220,
+"PRE1",
+"Prescaler 1"
+],
+[
+221,
+"T1",
+"Timer 1"
+],
+[
+222,
+"PRE2",
+"Prescaler 2"
+],
+[
+223,
+"T2",
+"Timer 2"
+],
+[
+224,
+"PRE3",
+"Prescaler 3"
+],
+[
+225,
+"T3",
+"Timer 3"
+],
+[
+226,
+"HCNT",
+"Horizontal counter"
+],
+[
+227,
+"VCNT",
+"Vertical counter"
+],
+[
+228,
+"TSR",
+"Transmit shift register"
+],
+[
+229,
+"RBR",
+"Receive buffer register"
+],
+[
+230,
+"UCON",
+"UART control register"
+],
+[
+231,
+"USR",
+"UART status register"
+],
+[
+232,
+"SIO",
+"Serial I/O register"
+],
+[
+233,
+"ADCON",
+"A-D control register"
+],
+[
+234,
+"ADR",
+"A-D register"
+],
+[
+235,
+"P4IN",
+"Port P4 input"
+],
+[
+236,
+"PHASECNT",
+"Vertical + Horizontal phase counter"
+],
+[
+237,
+"P2P3FUNC",
+"Port P2 P3 function register"
+],
+[
+238,
+"P3",
+"Port P3"
+],
+[
+239,
+"P3DIR",
+"Port P3 directional register"
+],
+[
+240,
+"P2",
+"Port P2"
+],
+[
+241,
+"P2DIR",
+"Port P2 directional register"
+],
+[
+242,
+"P1IN",
+"Port P1 latch input"
+],
+[
+243,
+"P1",
+"Port P1"
+],
+[
+244,
+"P1DIR",
+"Port P1 directional register"
+],
+[
+245,
+"P0FUNC",
+"Port P0 function register"
+],
+[
+246,
+"P0",
+"Port P0"
+],
+[
+247,
+"P0DIR",
+"Port P0 directional register"
+],
+[
+248,
+"SMCONH",
+"Stepper motor control register H"
+],
+[
+249,
+"SMCONV",
+"Stepper motor control register V"
+],
+[
+250,
+"STBT",
+"Strobe timer (Timer S)"
+],
+[
+251,
+"BRGTB",
+"Baud rate generator (Timer B)"
+],
+[
+252,
+"WDT",
+"Watchdog timer (Timer W)"
+],
+[
+253,
+"ICON3",
+"Interrupt control register 3"
+],
+[
+254,
+"ICON2",
+"Interrupt control register 2"
+],
+[
+255,
+"ICON1",
+"Interrupt control register 1"
+],
+[
+65534,
+"RESET",
+"Reset vector"
+],
+[
+65532,
+"INT_FFFC_INT2",
+"INT2 (External interrupt 2)"
+],
+[
+65530,
+"INT_FFFA_RI_INT1",
+"RI or INT1"
+],
+[
+65528,
+"INT_FFF8_T1T2T3",
+"Timer1, Timer2, or Timer3"
+],
+[
+65526,
+"INT_FFF6_HEVE",
+"HE or VE"
+],
+[
+65524,
+"INT_FFF4_TXCNTRBRK",
+"TX, CNTR, or BRK"
+]
+],
+"vector_table": [
+65524,
+65526,
+65528,
+65530,
+65532,
+65534
+]
+},
+"7450": {
+"symbol_table": [
+[
+208,
+"P0",
+"Port P0"
+],
+[
+209,
+"P0D",
+"Port P0 directional register"
+],
+[
+210,
+"P1",
+"Port P1"
+],
+[
+211,
+"P1D",
+"Port P1 directional register"
+],
+[
+212,
+"P2",
+"Port P2"
+],
+[
+213,
+"P2D",
+"Port P2 directional register"
+],
+[
+214,
+"P3",
+"Port P3"
+],
+[
+215,
+"P3D",
+"Port P3 directional register"
+],
+[
+216,
+"P4",
+"Port P4"
+],
+[
+217,
+"RESERV",
+"Reserved"
+],
+[
+218,
+"P5",
+"Port P5"
+],
+[
+219,
+"P5D",
+"Port P5 directional register"
+],
+[
+220,
+"P6",
+"Port P6"
+],
+[
+221,
+"P6D",
+"Port P6 directional register"
+],
+[
+222,
+"MISRG1",
+"Miscellaneous register 1"
+],
+[
+223,
+"MISRG2",
+"Miscellaneous register 2"
+],
+[
+224,
+"DA1",
+"D-A1 conversion register"
+],
+[
+225,
+"DA2",
+"D-A2 conversion register"
+],
+[
+226,
+"AD",
+"A-D conversion register"
+],
+[
+227,
+"ADCNT",
+"A-D control register"
+],
+[
+228,
+"DBB",
+"Data bus buffer register"
+],
+[
+229,
+"DBBSTS",
+"Data bus buffer status register"
+],
+[
+230,
+"RTB",
+"Receive/Transmit buffer register"
+],
+[
+231,
+"SIOSTS",
+"Serial I/O status register"
+],
+[
+232,
+"SIOCON",
+"Serial I/O control register"
+],
+[
+233,
+"UARTCON",
+"UART control register"
+],
+[
+234,
+"BRG",
+"Baud rate generator"
+],
+[
+235,
+"PWML",
+"PWM register (low-order)"
+],
+[
+236,
+"PWMH",
+"PWM register (high-order)"
+],
+[
+237,
+"T1CON",
+"Timer 1 control register"
+],
+[
+238,
+"T2CON",
+"Timer 2 control register"
+],
+[
+239,
+"T3CON",
+"Timer 3 control register"
+],
+[
+240,
+"T1L",
+"Timer 1 register (low-order)"
+],
+[
+241,
+"T1H",
+"Timer 1 register (high-order)"
+],
+[
+242,
+"T1LATL",
+"Timer 1 latch (low-order)"
+],
+[
+243,
+"T1LATH",
+"Timer 1 latch (high-order)"
+],
+[
+244,
+"T2L",
+"Timer 2 register (low-order)"
+],
+[
+245,
+"T2H",
+"Timer 2 register (high-order)"
+],
+[
+246,
+"T2LATL",
+"Timer 2 latch (low-order)"
+],
+[
+247,
+"T2LATH",
+"Timer 2 latch (high-order)"
+],
+[
+248,
+"T3L",
+"Timer 3 register (low-order)"
+],
+[
+249,
+"T3H",
+"Timer 3 register (high-order)"
+],
+[
+250,
+"T3LATL",
+"Timer 3 latch (low-order)"
+],
+[
+251,
+"T3LATH",
+"Timer 3 latch (high-order)"
+],
+[
+252,
+"IREQ1",
+"Interrupt request register 1"
+],
+[
+253,
+"IREQ2",
+"Interrupt request register 2"
+],
+[
+254,
+"ICON1",
+"Interrupt control register 1"
+],
+[
+255,
+"ICON2",
+"Interrupt control register 2"
+],
+[
+65534,
+"RESET",
+"Reset vector"
+],
+[
+65532,
+"INT_FFFC_IBF",
+"Input buffer full (IBF)"
+],
+[
+65530,
+"INT_FFFA_OBE",
+"Output buffer empty (OBE)"
+],
+[
+65528,
+"INT_FFF8_INT1",
+"INT1 (External interrupt 1)"
+],
+[
+65526,
+"INT_FFF6_INT2",
+"INT2 (External interrupt 2)"
+],
+[
+65524,
+"INT_FFF4_INT3",
+"INT3 (External interrupt 3)"
+],
+[
+65522,
+"INT_FFF2_TIMER1",
+"Timer 1"
+],
+[
+65520,
+"INT_FFF0_TIMER2",
+"Timer 2"
+],
+[
+65518,
+"INT_FFEE_TIMER3",
+"Timer 3"
+],
+[
+65516,
+"INT_FFEC_EVENT1",
+"EV1 (External event 1)"
+],
+[
+65514,
+"INT_FFEA_EVENT2",
+"EV2 (External event 2)"
+],
+[
+65512,
+"INT_FFE8_EVENT3",
+"EV3 (External event 3)"
+],
+[
+65510,
+"INT_FFE6_SIORX",
+"Serial I/O receive"
+],
+[
+65508,
+"INT_FFE4_SIOTX",
+"Serial I/O transmit"
+],
+[
+65506,
+"INT_FFE2_ADC",
+"A-D conversion completion flag"
+],
+[
+65504,
+"INT_BRK",
+"BRK instruction"
+]
+],
+"vector_table": [
+65504,
+65506,
+65508,
+65510,
+65512,
+65514,
+65516,
+65518,
+65520,
+65522,
+65524,
+65526,
+65528,
+65530,
+65532,
+65534
+]
+},
+"7451": {
+"symbol_table": [
+[
+208,
+"P0",
+"Port P0"
+],
+[
+209,
+"P0D",
+"Port P0 directional register"
+],
+[
+210,
+"P1",
+"Port P1"
+],
+[
+211,
+"P1D",
+"Port P1 directional register"
+],
+[
+212,
+"P2",
+"Port P2"
+],
+[
+213,
+"P2D",
+"Port P2 directional register"
+],
+[
+214,
+"P3",
+"Port P3"
+],
+[
+215,
+"P3D",
+"Port P3 directional register"
+],
+[
+216,
+"P4",
+"Port P4 / PWM prescaler latch"
+],
+[
+217,
+"AFD",
+"Additional function register"
+],
+[
+218,
+"P5",
+"Port P5"
+],
+[
+219,
+"P5D",
+"Port P5 directional register"
+],
+[
+220,
+"P6",
+"Port P6"
+],
+[
+221,
+"P6D",
+"Port P6 directional register"
+],
+[
+222,
+"MISRG1",
+"Miscellaneous register 1"
+],
+[
+223,
+"MISRG2",
+"Miscellaneous register 2"
+],
+[
+224,
+"DA1",
+"D-A1 conversion register"
+],
+[
+225,
+"DA2",
+"D-A2 conversion register"
+],
+[
+226,
+"AD",
+"A-D conversion register"
+],
+[
+227,
+"ADCNT",
+"A-D control register"
+],
+[
+228,
+"DBB",
+"Data bus buffer register"
+],
+[
+229,
+"DBBSTS",
+"Data bus buffer status register"
+],
+[
+230,
+"RTB",
+"Receive/Transmit buffer register"
+],
+[
+231,
+"SIOSTS",
+"Serial I/O status register"
+],
+[
+232,
+"SIOCON",
+"Serial I/O control register"
+],
+[
+233,
+"UARTCON",
+"UART control register"
+],
+[
+234,
+"BRG",
+"Baud rate generator"
+],
+[
+235,
+"PWML",
+"PWM register (low-order)"
+],
+[
+236,
+"PWMH",
+"PWM register (high-order)"
+],
+[
+237,
+"T1CON",
+"Timer 1 control register"
+],
+[
+238,
+"T2CON",
+"Timer 2 control register"
+],
+[
+239,
+"T3CON",
+"Timer 3 control register"
+],
+[
+240,
+"T1L",
+"Timer 1 register (low-order)"
+],
+[
+241,
+"T1H",
+"Timer 1 register (high-order)"
+],
+[
+242,
+"T1LATL",
+"Timer 1 latch (low-order)"
+],
+[
+243,
+"T1LATH",
+"Timer 1 latch (high-order)"
+],
+[
+244,
+"T2L",
+"Timer 2 register (low-order)"
+],
+[
+245,
+"T2H",
+"Timer 2 register (high-order)"
+],
+[
+246,
+"T2LATL",
+"Timer 2 latch (low-order)"
+],
+[
+247,
+"T2LATH",
+"Timer 2 latch (high-order)"
+],
+[
+248,
+"T3L",
+"Timer 3 register (low-order)"
+],
+[
+249,
+"T3H",
+"Timer 3 register (high-order)"
+],
+[
+250,
+"T3LATL",
+"Timer 3 latch (low-order)"
+],
+[
+251,
+"T3LATH",
+"Timer 3 latch (high-order)"
+],
+[
+252,
+"IREQ1",
+"Interrupt request register 1"
+],
+[
+253,
+"IREQ2",
+"Interrupt request register 2"
+],
+[
+254,
+"ICON1",
+"Interrupt control register 1"
+],
+[
+255,
+"ICON2",
+"Interrupt control register 2"
+],
+[
+65534,
+"RESET",
+"Reset vector"
+],
+[
+65532,
+"INT_FFFC_IBF",
+"Input buffer full (IBF)"
+],
+[
+65530,
+"INT_FFFA_OBE",
+"Output buffer empty (OBE)"
+],
+[
+65528,
+"INT_FFF8_INT1",
+"INT1 (External interrupt 1)"
+],
+[
+65526,
+"INT_FFF6_INT2",
+"INT2 (External interrupt 2)"
+],
+[
+65524,
+"INT_FFF4_INT3",
+"INT3 (External interrupt 3)"
+],
+[
+65522,
+"INT_FFF2_TIMER1",
+"Timer 1"
+],
+[
+65520,
+"INT_FFF0_TIMER2",
+"Timer 2"
+],
+[
+65518,
+"INT_FFEE_TIMER3",
+"Timer 3"
+],
+[
+65516,
+"INT_FFEC_EVENT1",
+"EV1 (External event 1)"
+],
+[
+65514,
+"INT_FFEA_EVENT2",
+"EV2 (External event 2)"
+],
+[
+65512,
+"INT_FFE8_EVENT3",
+"EV3 (External event 3)"
+],
+[
+65510,
+"INT_FFE6_SIORX",
+"Serial I/O receive"
+],
+[
+65508,
+"INT_FFE4_SIOTX",
+"Serial I/O transmit"
+],
+[
+65506,
+"INT_FFE2_ADC",
+"A-D conversion completion flag"
+],
+[
+65504,
+"INT_BRK",
+"BRK instruction"
+]
+],
+"vector_table": [
+65504,
+65506,
+65508,
+65510,
+65512,
+65514,
+65516,
+65518,
+65520,
+65522,
+65524,
+65526,
+65528,
+65530,
+65532,
+65534
+]
+},
+"M37450": {
+"symbol_table": [
+[
+208,
+"P0",
+"Port P0"
+],
+[
+209,
+"P0D",
+"Port P0 directional register"
+],
+[
+210,
+"P1",
+"Port P1"
+],
+[
+211,
+"P1D",
+"Port P1 directional register"
+],
+[
+212,
+"P2",
+"Port P2"
+],
+[
+213,
+"P2D",
+"Port P2 directional register"
+],
+[
+214,
+"P3",
+"Port P3"
+],
+[
+215,
+"P3D",
+"Port P3 directional register"
+],
+[
+216,
+"P4",
+"Port P4"
+],
+[
+217,
+"RESERV",
+"Reserved"
+],
+[
+218,
+"P5",
+"Port P5"
+],
+[
+219,
+"P5D",
+"Port P5 directional register"
+],
+[
+220,
+"P6",
+"Port P6"
+],
+[
+221,
+"P6D",
+"Port P6 directional register"
+],
+[
+222,
+"MISRG1",
+"Miscellaneous register 1"
+],
+[
+223,
+"MISRG2",
+"Miscellaneous register 2"
+],
+[
+224,
+"DA1",
+"D-A1 conversion register"
+],
+[
+225,
+"DA2",
+"D-A2 conversion register"
+],
+[
+226,
+"AD",
+"A-D conversion register"
+],
+[
+227,
+"ADCNT",
+"A-D control register"
+],
+[
+228,
+"DBB",
+"Data bus buffer register"
+],
+[
+229,
+"DBBSTS",
+"Data bus buffer status register"
+],
+[
+230,
+"RTB",
+"Receive/Transmit buffer register"
+],
+[
+231,
+"SIOSTS",
+"Serial I/O status register"
+],
+[
+232,
+"SIOCON",
+"Serial I/O control register"
+],
+[
+233,
+"UARTCON",
+"UART control register"
+],
+[
+234,
+"BRG",
+"Baud rate generator"
+],
+[
+235,
+"PWML",
+"PWM register (low-order)"
+],
+[
+236,
+"PWMH",
+"PWM register (high-order)"
+],
+[
+237,
+"T1CON",
+"Timer 1 control register"
+],
+[
+238,
+"T2CON",
+"Timer 2 control register"
+],
+[
+239,
+"T3CON",
+"Timer 3 control register"
+],
+[
+240,
+"T1L",
+"Timer 1 register (low-order)"
+],
+[
+241,
+"T1H",
+"Timer 1 register (high-order)"
+],
+[
+242,
+"T1LATL",
+"Timer 1 latch (low-order)"
+],
+[
+243,
+"T1LATH",
+"Timer 1 latch (high-order)"
+],
+[
+244,
+"T2L",
+"Timer 2 register (low-order)"
+],
+[
+245,
+"T2H",
+"Timer 2 register (high-order)"
+],
+[
+246,
+"T2LATL",
+"Timer 2 latch (low-order)"
+],
+[
+247,
+"T2LATH",
+"Timer 2 latch (high-order)"
+],
+[
+248,
+"T3L",
+"Timer 3 register (low-order)"
+],
+[
+249,
+"T3H",
+"Timer 3 register (high-order)"
+],
+[
+250,
+"T3LATL",
+"Timer 3 latch (low-order)"
+],
+[
+251,
+"T3LATH",
+"Timer 3 latch (high-order)"
+],
+[
+252,
+"IREQ1",
+"Interrupt request register 1"
+],
+[
+253,
+"IREQ2",
+"Interrupt request register 2"
+],
+[
+254,
+"ICON1",
+"Interrupt control register 1"
+],
+[
+255,
+"ICON2",
+"Interrupt control register 2"
+],
+[
+65534,
+"RESET",
+"Reset vector"
+],
+[
+65532,
+"INT_FFFC_IBF",
+"Input buffer full (IBF)"
+],
+[
+65530,
+"INT_FFFA_OBE",
+"Output buffer empty (OBE)"
+],
+[
+65528,
+"INT_FFF8_INT1",
+"INT1 (External interrupt 1)"
+],
+[
+65526,
+"INT_FFF6_INT2",
+"INT2 (External interrupt 2)"
+],
+[
+65524,
+"INT_FFF4_INT3",
+"INT3 (External interrupt 3)"
+],
+[
+65522,
+"INT_FFF2_TIMER1",
+"Timer 1"
+],
+[
+65520,
+"INT_FFF0_TIMER2",
+"Timer 2"
+],
+[
+65518,
+"INT_FFEE_TIMER3",
+"Timer 3"
+],
+[
+65516,
+"INT_FFEC_EVENT1",
+"EV1 (External event 1)"
+],
+[
+65514,
+"INT_FFEA_EVENT2",
+"EV2 (External event 2)"
+],
+[
+65512,
+"INT_FFE8_EVENT3",
+"EV3 (External event 3)"
+],
+[
+65510,
+"INT_FFE6_SIORX",
+"Serial I/O receive"
+],
+[
+65508,
+"INT_FFE4_SIOTX",
+"Serial I/O transmit"
+],
+[
+65506,
+"INT_FFE2_ADC",
+"A-D conversion completion flag"
+],
+[
+65504,
+"INT_BRK",
+"BRK instruction"
+]
+],
+"vector_table": [
+65504,
+65506,
+65508,
+65510,
+65512,
+65514,
+65516,
+65518,
+65520,
+65522,
+65524,
+65526,
+65528,
+65530,
+65532,
+65534
+]
+},
+"M37451": {
+"symbol_table": [
+[
+208,
+"P0",
+"Port P0"
+],
+[
+209,
+"P0D",
+"Port P0 directional register"
+],
+[
+210,
+"P1",
+"Port P1"
+],
+[
+211,
+"P1D",
+"Port P1 directional register"
+],
+[
+212,
+"P2",
+"Port P2"
+],
+[
+213,
+"P2D",
+"Port P2 directional register"
+],
+[
+214,
+"P3",
+"Port P3"
+],
+[
+215,
+"P3D",
+"Port P3 directional register"
+],
+[
+216,
+"P4",
+"Port P4 / PWM prescaler latch"
+],
+[
+217,
+"AFD",
+"Additional function register"
+],
+[
+218,
+"P5",
+"Port P5"
+],
+[
+219,
+"P5D",
+"Port P5 directional register"
+],
+[
+220,
+"P6",
+"Port P6"
+],
+[
+221,
+"P6D",
+"Port P6 directional register"
+],
+[
+222,
+"MISRG1",
+"Miscellaneous register 1"
+],
+[
+223,
+"MISRG2",
+"Miscellaneous register 2"
+],
+[
+224,
+"DA1",
+"D-A1 conversion register"
+],
+[
+225,
+"DA2",
+"D-A2 conversion register"
+],
+[
+226,
+"AD",
+"A-D conversion register"
+],
+[
+227,
+"ADCNT",
+"A-D control register"
+],
+[
+228,
+"DBB",
+"Data bus buffer register"
+],
+[
+229,
+"DBBSTS",
+"Data bus buffer status register"
+],
+[
+230,
+"RTB",
+"Receive/Transmit buffer register"
+],
+[
+231,
+"SIOSTS",
+"Serial I/O status register"
+],
+[
+232,
+"SIOCON",
+"Serial I/O control register"
+],
+[
+233,
+"UARTCON",
+"UART control register"
+],
+[
+234,
+"BRG",
+"Baud rate generator"
+],
+[
+235,
+"PWML",
+"PWM register (low-order)"
+],
+[
+236,
+"PWMH",
+"PWM register (high-order)"
+],
+[
+237,
+"T1CON",
+"Timer 1 control register"
+],
+[
+238,
+"T2CON",
+"Timer 2 control register"
+],
+[
+239,
+"T3CON",
+"Timer 3 control register"
+],
+[
+240,
+"T1L",
+"Timer 1 register (low-order)"
+],
+[
+241,
+"T1H",
+"Timer 1 register (high-order)"
+],
+[
+242,
+"T1LATL",
+"Timer 1 latch (low-order)"
+],
+[
+243,
+"T1LATH",
+"Timer 1 latch (high-order)"
+],
+[
+244,
+"T2L",
+"Timer 2 register (low-order)"
+],
+[
+245,
+"T2H",
+"Timer 2 register (high-order)"
+],
+[
+246,
+"T2LATL",
+"Timer 2 latch (low-order)"
+],
+[
+247,
+"T2LATH",
+"Timer 2 latch (high-order)"
+],
+[
+248,
+"T3L",
+"Timer 3 register (low-order)"
+],
+[
+249,
+"T3H",
+"Timer 3 register (high-order)"
+],
+[
+250,
+"T3LATL",
+"Timer 3 latch (low-order)"
+],
+[
+251,
+"T3LATH",
+"Timer 3 latch (high-order)"
+],
+[
+252,
+"IREQ1",
+"Interrupt request register 1"
+],
+[
+253,
+"IREQ2",
+"Interrupt request register 2"
+],
+[
+254,
+"ICON1",
+"Interrupt control register 1"
+],
+[
+255,
+"ICON2",
+"Interrupt control register 2"
+],
+[
+65534,
+"RESET",
+"Reset vector"
+],
+[
+65532,
+"INT_FFFC_IBF",
+"Input buffer full (IBF)"
+],
+[
+65530,
+"INT_FFFA_OBE",
+"Output buffer empty (OBE)"
+],
+[
+65528,
+"INT_FFF8_INT1",
+"INT1 (External interrupt 1)"
+],
+[
+65526,
+"INT_FFF6_INT2",
+"INT2 (External interrupt 2)"
+],
+[
+65524,
+"INT_FFF4_INT3",
+"INT3 (External interrupt 3)"
+],
+[
+65522,
+"INT_FFF2_TIMER1",
+"Timer 1"
+],
+[
+65520,
+"INT_FFF0_TIMER2",
+"Timer 2"
+],
+[
+65518,
+"INT_FFEE_TIMER3",
+"Timer 3"
+],
+[
+65516,
+"INT_FFEC_EVENT1",
+"EV1 (External event 1)"
+],
+[
+65514,
+"INT_FFEA_EVENT2",
+"EV2 (External event 2)"
+],
+[
+65512,
+"INT_FFE8_EVENT3",
+"EV3 (External event 3)"
+],
+[
+65510,
+"INT_FFE6_SIORX",
+"Serial I/O receive"
+],
+[
+65508,
+"INT_FFE4_SIOTX",
+"Serial I/O transmit"
+],
+[
+65506,
+"INT_FFE2_ADC",
+"A-D conversion completion flag"
+],
+[
+65504,
+"INT_BRK",
+"BRK instruction"
+]
+],
+"vector_table": [
+65504,
+65506,
+65508,
+65510,
+65512,
+65514,
+65516,
+65518,
+65520,
+65522,
+65524,
+65526,
+65528,
+65530,
+65532,
+65534
+]
+},
+"M3802": {
+"symbol_table": [
+[
+0,
+"P0",
+"Port P0"
+],
+[
+1,
+"P0D",
+"Port P0 direction register"
+],
+[
+2,
+"P1",
+"Port P1"
+],
+[
+3,
+"P1D",
+"Port P1 direction register"
+],
+[
+4,
+"P2",
+"Port P2"
+],
+[
+5,
+"P2D",
+"Port P2 direction register"
+],
+[
+6,
+"P3",
+"Port P3"
+],
+[
+7,
+"P3D",
+"Port P3 direction register"
+],
+[
+8,
+"P4",
+"Port P4"
+],
+[
+9,
+"P4D",
+"Port P4 direction register"
+],
+[
+10,
+"P5",
+"Port P5"
+],
+[
+11,
+"P5D",
+"Port P5 direction register"
+],
+[
+12,
+"P6",
+"Port P6"
+],
+[
+13,
+"P6D",
+"Port P6 direction register"
+],
+[
+24,
+"TB_RB",
+"Transmit/Receive buffer register"
+],
+[
+25,
+"SIO1STS",
+"Serial I/O1 status register"
+],
+[
+26,
+"SIO1CON",
+"Serial I/O1 control register"
+],
+[
+27,
+"UARTCON",
+"UART control register"
+],
+[
+28,
+"BRG",
+"Baud rate generator"
+],
+[
+29,
+"SIO2CON",
+"Serial I/O2 control register"
+],
+[
+31,
+"SIO2",
+"Serial I/O2 register"
+],
+[
+32,
+"PRE12",
+"Prescaler 12"
+],
+[
+33,
+"T1",
+"Timer 1"
+],
+[
+34,
+"T2",
+"Timer 2"
+],
+[
+35,
+"TM",
+"Timer XY mode register"
+],
+[
+36,
+"PREX",
+"Prescaler X"
+],
+[
+37,
+"TX",
+"Timer X"
+],
+[
+38,
+"PREY",
+"Prescaler Y"
+],
+[
+39,
+"TY",
+"Timer Y"
+],
+[
+43,
+"PWMCON",
+"PWM control register"
+],
+[
+44,
+"PREPWM",
+"PWM prescaler"
+],
+[
+45,
+"PWM",
+"PWM register"
+],
+[
+52,
+"ADCON",
+"AD/DA control register"
+],
+[
+53,
+"AD",
+"A-D conversion register"
+],
+[
+54,
+"DA1",
+"D-A1 conversion register"
+],
+[
+55,
+"DA2",
+"D-A2 conversion register"
+],
+[
+58,
+"INTEDGE",
+"Interrupt edge selection register"
+],
+[
+59,
+"CPUM",
+"CPU mode register"
+],
+[
+60,
+"IREQ1",
+"Interrupt request register 1"
+],
+[
+61,
+"IREQ2",
+"Interrupt request register 2"
+],
+[
+62,
+"ICON1",
+"Interrupt control register 1"
+],
+[
+63,
+"ICON2",
+"Interrupt control register 2"
+],
+[
+65532,
+"RESET",
+"Reset vector"
+],
+[
+65530,
+"INT_FFFA",
+"INT0"
+],
+[
+65528,
+"INT_FFF8",
+"INT1"
+],
+[
+65526,
+"INT_FFF6",
+"Serial I/O 1 reception"
+],
+[
+65524,
+"INT_FFF4",
+"Serial I/O 1 transmission"
+],
+[
+65522,
+"INT_FFF2",
+"Timer X"
+],
+[
+65520,
+"INT_FFF0",
+"Timer Y"
+],
+[
+65518,
+"INT_FFEE",
+"Timer 1"
+],
+[
+65516,
+"INT_FFEC",
+"Timer 2"
+],
+[
+65514,
+"INT_FFEA",
+"CNTR0"
+],
+[
+65512,
+"INT_FFE8",
+"CNTR1"
+],
+[
+65510,
+"INT_FFE6",
+"Serial I/O 2"
+],
+[
+65508,
+"INT_FFE4",
+"INT2"
+],
+[
+65506,
+"INT_FFE2",
+"INT3"
+],
+[
+65504,
+"INT_FFE0",
+"INT4"
+],
+[
+65502,
+"INT_FFDE",
+"A-D converter"
+],
+[
+65500,
+"INT_BRK",
+"BRK instruction interrupt"
+]
+],
+"vector_table": [
+65500,
+65502,
+65504,
+65506,
+65508,
+65510,
+65512,
+65514,
+65516,
+65518,
+65520,
+65522,
+65524,
+65526,
+65528,
+65530,
+65532
+]
+},
+"M3807": {
+"symbol_table": [
+[
+0,
+"P0",
+"Port P0"
+],
+[
+1,
+"P0D",
+"Port P0 direction register"
+],
+[
+2,
+"P1",
+"Port P1"
+],
+[
+3,
+"P1D",
+"Port P1 direction register"
+],
+[
+4,
+"P2",
+"Port P2"
+],
+[
+5,
+"P2D",
+"Port P2 direction register"
+],
+[
+6,
+"P3",
+"Port P3"
+],
+[
+7,
+"P3D",
+"Port P3 direction register"
+],
+[
+8,
+"P4",
+"Port P4"
+],
+[
+9,
+"P4D",
+"Port P4 direction register"
+],
+[
+10,
+"P5",
+"Port P5"
+],
+[
+11,
+"P5D",
+"Port P5 direction register"
+],
+[
+12,
+"P6",
+"Port P6"
+],
+[
+13,
+"P6D",
+"Port P6 direction register"
+],
+[
+14,
+"P7",
+"Port P7"
+],
+[
+15,
+"P7D",
+"Port P7 direction register"
+],
+[
+16,
+"P8",
+"Port P8"
+],
+[
+17,
+"P8D",
+"Port P8 direction register"
+],
+[
+20,
+"TXYCON",
+"Timer XY control register"
+],
+[
+21,
+"P2P3C",
+"Port P2P3 control register"
+],
+[
+22,
+"PULL",
+"Pull-up control register"
+],
+[
+23,
+"WDTCON",
+"Watchdog timer control register"
+],
+[
+24,
+"TB_RB",
+"Transmit/Receive buffer register"
+],
+[
+25,
+"SIO1STS",
+"Serial I/O1 status register"
+],
+[
+26,
+"SIO1CON",
+"Serial I/O1 control register"
+],
+[
+27,
+"UARTCON",
+"UART control register"
+],
+[
+28,
+"BRG",
+"Baud rate generator"
+],
+[
+29,
+"SIO2CON1",
+"Serial I/O2 control register 1"
+],
+[
+30,
+"SIO2CON2",
+"Serial I/O2 control register 2"
+],
+[
+31,
+"SIO2",
+"Serial I/O2 register"
+],
+[
+32,
+"TXL",
+"Timer X (low-order)"
+],
+[
+33,
+"TXH",
+"Timer X (high-order)"
+],
+[
+34,
+"TYL",
+"Timer Y (low-order)"
+],
+[
+35,
+"TYH",
+"Timer Y (high-order)"
+],
+[
+36,
+"T1",
+"Timer 1"
+],
+[
+37,
+"T2",
+"Timer 2"
+],
+[
+38,
+"T3",
+"Timer 3"
+],
+[
+39,
+"TXM",
+"Timer X mode register"
+],
+[
+40,
+"TYM",
+"Timer Y mode register"
+],
+[
+41,
+"T123M",
+"Timer 123 mode register"
+],
+[
+42,
+"RTP",
+"Real time port register"
+],
+[
+43,
+"RTPCON0",
+"Real time port control register 0"
+],
+[
+44,
+"RTPCON1",
+"Real time port control register 1"
+],
+[
+45,
+"RTPCON2",
+"Real time port control register 2"
+],
+[
+46,
+"RTPCON3",
+"Real time port control register 3"
+],
+[
+47,
+"TAL",
+"Timer A (low-order)"
+],
+[
+48,
+"TAH",
+"Timer A (high-order)"
+],
+[
+49,
+"TBL",
+"Timer B (low-order)"
+],
+[
+50,
+"TBH",
+"Timer B (high-order)"
+],
+[
+51,
+"DACON",
+"D-A control register"
+],
+[
+52,
+"ADCON",
+"A-D control register"
+],
+[
+53,
+"AD",
+"A-D conversion register"
+],
+[
+54,
+"DA1",
+"D-A1 conversion register"
+],
+[
+55,
+"DA2",
+"D-A2 conversion register"
+],
+[
+56,
+"DA3",
+"D-A3 conversion register"
+],
+[
+57,
+"DA4",
+"D-A4 conversion register"
+],
+[
+58,
+"INTEDGE",
+"Interrupt edge selection register"
+],
+[
+59,
+"CPUM",
+"CPU mode register"
+],
+[
+60,
+"IREQ1",
+"Interrupt request register 1"
+],
+[
+61,
+"IREQ2",
+"Interrupt request register 2"
+],
+[
+62,
+"ICON1",
+"Interrupt control register 1"
+],
+[
+63,
+"ICON2",
+"Interrupt control register 2"
+],
+[
+65532,
+"RESET",
+"Reset vector"
+],
+[
+65530,
+"INT_FFFA",
+"INT0"
+],
+[
+65528,
+"INT_FFF8",
+"INT1"
+],
+[
+65526,
+"INT_FFF6",
+"Serial I/O 1 reception"
+],
+[
+65524,
+"INT_FFF4",
+"Serial I/O 2 transmission"
+],
+[
+65522,
+"INT_FFF2",
+"Timer X"
+],
+[
+65520,
+"INT_FFF0",
+"Timer Y"
+],
+[
+65518,
+"INT_FFEE",
+"INT3 / Timer 2"
+],
+[
+65516,
+"INT_FFEC",
+"INT4 / Timer 3"
+],
+[
+65514,
+"INT_FFEA",
+"CNTR0"
+],
+[
+65512,
+"INT_FFE8",
+"CNTR1"
+],
+[
+65510,
+"INT_FFE6",
+"Serial I/O 2"
+],
+[
+65508,
+"INT_FFE4",
+"INT2 / Timer 1"
+],
+[
+65506,
+"INT_FFE2",
+"Timer A"
+],
+[
+65504,
+"INT_FFE0",
+"Timer B"
+],
+[
+65502,
+"INT_FFDE",
+"A-D converter / ADT"
+],
+[
+65500,
+"INT_BRK",
+"BRK instruction interrupt"
+]
+],
+"vector_table": [
+65500,
+65502,
+65504,
+65506,
+65508,
+65510,
+65512,
+65514,
+65516,
+65518,
+65520,
+65522,
+65524,
+65526,
+65528,
+65530,
+65532
+]
+},
+"M3886": {
+"symbol_table": [
+[
+0,
+"P0",
+"Port P0"
+],
+[
+1,
+"P0D",
+"Port P0 direction register"
+],
+[
+2,
+"P1",
+"Port P1"
+],
+[
+3,
+"P1D",
+"Port P1 direction register"
+],
+[
+4,
+"P2",
+"Port P2"
+],
+[
+5,
+"P2D",
+"Port P2 direction register"
+],
+[
+6,
+"P3",
+"Port P3"
+],
+[
+7,
+"P3D",
+"Port P3 direction register"
+],
+[
+8,
+"P4",
+"Port P4"
+],
+[
+9,
+"P4D",
+"Port P4 direction register"
+],
+[
+10,
+"P5",
+"Port P5"
+],
+[
+11,
+"P5D",
+"Port P5 direction register"
+],
+[
+12,
+"P6",
+"Port P6"
+],
+[
+13,
+"P6D",
+"Port P6 direction register"
+],
+[
+14,
+"P7",
+"Port P7"
+],
+[
+15,
+"P7D",
+"Port P7 direction register"
+],
+[
+16,
+"P8_P4I",
+"Port P8 / Port P4 input register"
+],
+[
+17,
+"P8D_P7I",
+"Port P8 direction register / Port P7 input register"
+],
+[
+18,
+"S0",
+"I2C data shift register"
+],
+[
+19,
+"S0D",
+"I2C address register"
+],
+[
+20,
+"S1",
+"I2C status register"
+],
+[
+21,
+"S1D",
+"I2C control register"
+],
+[
+22,
+"S2",
+"I2C clock control register"
+],
+[
+23,
+"S2D",
+"I2C start/stop condition control register"
+],
+[
+24,
+"TB_RB",
+"Transmit/Receive buffer register"
+],
+[
+25,
+"SIO1STS",
+"Serial I/O1 status register"
+],
+[
+26,
+"SIO1CON",
+"Serial I/O1 control register"
+],
+[
+27,
+"UARTCON",
+"UART control register"
+],
+[
+28,
+"BRG",
+"Baud rate generator"
+],
+[
+29,
+"SIO2CON",
+"Serial I/O2 control register"
+],
+[
+30,
+"WDTCON",
+"Watchdog timer control register"
+],
+[
+31,
+"SIO2",
+"Serial I/O2 register"
+],
+[
+32,
+"PRE12",
+"Prescaler 12"
+],
+[
+33,
+"T1",
+"Timer 1"
+],
+[
+34,
+"T2",
+"Timer 2"
+],
+[
+35,
+"TM",
+"Timer XY mode register"
+],
+[
+36,
+"PREX",
+"Prescaler X"
+],
+[
+37,
+"TX",
+"Timer X"
+],
+[
+38,
+"PREY",
+"Prescaler Y"
+],
+[
+39,
+"TY",
+"Timer Y"
+],
+[
+40,
+"DBB0",
+"Data bus buffer register 0"
+],
+[
+41,
+"DBBSTS0",
+"Data bus buffer status register 0"
+],
+[
+42,
+"DBBCON",
+"Data bus buffer control register"
+],
+[
+43,
+"DBB1",
+"Data bus buffer register 1"
+],
+[
+44,
+"DBBSTS1",
+"Data bus buffer status register 1"
+],
+[
+45,
+"CMPD",
+"Comparator data register"
+],
+[
+46,
+"PCTL1",
+"Port control register 1"
+],
+[
+47,
+"PCTL2",
+"Port control register 2"
+],
+[
+48,
+"PWM0H",
+"PWM0H register"
+],
+[
+49,
+"PWM0L",
+"PWM0L register"
+],
+[
+50,
+"PWM1H",
+"PWM1H register"
+],
+[
+51,
+"PWM1L",
+"PWM1L register"
+],
+[
+52,
+"ADCON",
+"AD/DA control register"
+],
+[
+53,
+"AD1",
+"A-D conversion register 1"
+],
+[
+54,
+"DA1",
+"D-A1 conversion register"
+],
+[
+55,
+"DA2",
+"D-A2 conversion register"
+],
+[
+56,
+"AD2",
+"A-D conversion register 2"
+],
+[
+57,
+"INTSEL",
+"Interrupt source selection register"
+],
+[
+58,
+"INTEDGE",
+"Interrupt edge selection register"
+],
+[
+59,
+"CPUM",
+"CPU mode register"
+],
+[
+60,
+"IREQ1",
+"Interrupt request register 1"
+],
+[
+61,
+"IREQ2",
+"Interrupt request register 2"
+],
+[
+62,
+"ICON1",
+"Interrupt control register 1"
+],
+[
+63,
+"ICON2",
+"Interrupt control register 2"
+],
+[
+4094,
+"FCON",
+"Flash memory control register"
+],
+[
+4095,
+"FCMD",
+"Flash command register"
+],
+[
+65532,
+"RESET",
+"Reset vector"
+],
+[
+65530,
+"INT_FFFA",
+"INT0 / Input buffer full (IBF)"
+],
+[
+65528,
+"INT_FFF8",
+"INT1 / Output buffer empty (OBE)"
+],
+[
+65526,
+"INT_FFF6",
+"Serial I/O 1 reception"
+],
+[
+65524,
+"INT_FFF4",
+"Serial I/O 2 transmission / SCL, SDA"
+],
+[
+65522,
+"INT_FFF2",
+"Timer X"
+],
+[
+65520,
+"INT_FFF0",
+"Timer Y"
+],
+[
+65518,
+"INT_FFEE",
+"Timer 1"
+],
+[
+65516,
+"INT_FFEC",
+"Timer 2"
+],
+[
+65514,
+"INT_FFEA",
+"CNTR0 / SCL, SDA"
+],
+[
+65512,
+"INT_FFE8",
+"CNTR1 / Key-on wake-up"
+],
+[
+65510,
+"INT_FFE6",
+"Serial I/O 2 / I2C"
+],
+[
+65508,
+"INT_FFE4",
+"INT2 / I2C"
+],
+[
+65506,
+"INT_FFE2",
+"INT3"
+],
+[
+65504,
+"INT_FFE0",
+"INT4"
+],
+[
+65502,
+"INT_FFDE",
+"A-D converter / Key-on wake-up"
+],
+[
+65500,
+"INT_BRK",
+"BRK instruction interrupt"
+]
+],
+"vector_table": [
+65500,
+65502,
+65504,
+65506,
+65508,
+65510,
+65512,
+65514,
+65516,
+65518,
+65520,
+65522,
+65524,
+65526,
+65528,
+65530,
+65532
+]
+},
+"M50734": {
+"symbol_table": [
+[
+218,
+"TXL",
+"Timer X (lower byte)"
+],
+[
+219,
+"TXH",
+"Timer X (higher byte)"
+],
+[
+220,
+"PRE1",
+"Prescaler 1"
+],
+[
+221,
+"T1",
+"Timer 1"
+],
+[
+222,
+"PRE2",
+"Prescaler 2"
+],
+[
+223,
+"T2",
+"Timer 2"
+],
+[
+224,
+"PRE3",
+"Prescaler 3"
+],
+[
+225,
+"T3",
+"Timer 3"
+],
+[
+226,
+"HCNT",
+"Horizontal counter"
+],
+[
+227,
+"VCNT",
+"Vertical counter"
+],
+[
+228,
+"TSR",
+"Transmit shift register"
+],
+[
+229,
+"RBR",
+"Receive buffer register"
+],
+[
+230,
+"UCON",
+"UART control register"
+],
+[
+231,
+"USR",
+"UART status register"
+],
+[
+232,
+"SIO",
+"Serial I/O register"
+],
+[
+233,
+"ADCON",
+"A-D control register"
+],
+[
+234,
+"ADR",
+"A-D register"
+],
+[
+235,
+"P4IN",
+"Port P4 input"
+],
+[
+236,
+"PHASECNT",
+"Vertical + Horizontal phase counter"
+],
+[
+237,
+"P2P3FUNC",
+"Port P2 P3 function register"
+],
+[
+238,
+"P3",
+"Port P3"
+],
+[
+239,
+"P3DIR",
+"Port P3 directional register"
+],
+[
+240,
+"P2",
+"Port P2"
+],
+[
+241,
+"P2DIR",
+"Port P2 directional register"
+],
+[
+242,
+"P1IN",
+"Port P1 latch input"
+],
+[
+243,
+"P1",
+"Port P1"
+],
+[
+244,
+"P1DIR",
+"Port P1 directional register"
+],
+[
+245,
+"P0FUNC",
+"Port P0 function register"
+],
+[
+246,
+"P0",
+"Port P0"
+],
+[
+247,
+"P0DIR",
+"Port P0 directional register"
+],
+[
+248,
+"SMCONH",
+"Stepper motor control register H"
+],
+[
+249,
+"SMCONV",
+"Stepper motor control register V"
+],
+[
+250,
+"STBT",
+"Strobe timer (Timer S)"
+],
+[
+251,
+"BRGTB",
+"Baud rate generator (Timer B)"
+],
+[
+252,
+"WDT",
+"Watchdog timer (Timer W)"
+],
+[
+253,
+"ICON3",
+"Interrupt control register 3"
+],
+[
+254,
+"ICON2",
+"Interrupt control register 2"
+],
+[
+255,
+"ICON1",
+"Interrupt control register 1"
+],
+[
+65534,
+"RESET",
+"Reset vector"
+],
+[
+65532,
+"INT_FFFC_INT2",
+"INT2 (External interrupt 2)"
+],
+[
+65530,
+"INT_FFFA_RI_INT1",
+"RI or INT1"
+],
+[
+65528,
+"INT_FFF8_T1T2T3",
+"Timer1, Timer2, or Timer3"
+],
+[
+65526,
+"INT_FFF6_HEVE",
+"HE or VE"
+],
+[
+65524,
+"INT_FFF4_TXCNTRBRK",
+"TX, CNTR, or BRK"
+]
+],
+"vector_table": [
+65524,
+65526,
+65528,
+65530,
+65532,
+65534
+]
+}
+}

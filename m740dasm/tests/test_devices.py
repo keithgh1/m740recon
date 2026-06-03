@@ -1,0 +1,81 @@
+"""Tests for the device hierarchy and per-core opcode gating."""
+
+import json
+import os
+import unittest
+
+from m740dasm.devices import Devices
+from m740dasm.disasm import disassemble
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+SNAPSHOT = os.path.join(HERE, "device_snapshot.json")
+
+
+class DeviceResolutionTests(unittest.TestCase):
+    """The hierarchy must resolve to exactly the tables the flat definitions
+    produced before the refactor (captured in device_snapshot.json)."""
+
+    def test_resolved_tables_match_snapshot(self):
+        with open(SNAPSHOT) as f:
+            snap = json.load(f)
+        # Every snapshotted device must still be present and byte-identical.
+        # New devices may be added (subset, not exact equality) but an existing
+        # entry must never be dropped or overwritten.
+        missing = set(snap) - set(Devices)
+        self.assertEqual(missing, set(), "snapshotted devices went missing: %s" % missing)
+        for name, expected in snap.items():
+            got = Devices[name]
+            got_syms = {s.address: [s.name, s.comment] for s in got["symbol_table"]}
+            exp_syms = {e[0]: [e[1], e[2]] for e in expected["symbol_table"]}
+            self.assertEqual(got_syms, exp_syms, "symbols differ for %s" % name)
+            self.assertEqual(set(got["vector_table"]),
+                             set(expected["vector_table"]), "vectors differ for %s" % name)
+
+    def test_every_device_has_unsupported_set(self):
+        for name, dev in Devices.items():
+            self.assertIn("unsupported_opcodes", dev)
+            self.assertEqual(dev["unsupported_opcodes"], frozenset(),
+                             "%s should not gate any opcode by default" % name)
+
+
+class InheritanceTests(unittest.TestCase):
+    def test_7451_inherits_7450_and_overrides(self):
+        s7450 = {s.address: s.name for s in Devices["7450"]["symbol_table"]}
+        s7451 = {s.address: s.name for s in Devices["7451"]["symbol_table"]}
+        self.assertEqual(s7450[0x00d0], s7451[0x00d0])      # inherited (P0)
+        self.assertEqual(s7451[0x00d9], "AFD")              # overridden
+        self.assertEqual(s7450[0x00d9], "RESERV")           # base value differs
+
+    def test_m380x_share_base_ports(self):
+        for dev in ("M3802", "M3807", "M3886"):
+            ports = {s.address: s.name for s in Devices[dev]["symbol_table"]}
+            self.assertEqual(ports[0x0000], "P0")           # from the _m3800 base
+            self.assertEqual(ports[0x000d], "P6D")
+
+
+class OpcodeGatingTests(unittest.TestCase):
+    def test_gated_opcode_decodes_as_data(self):
+        mem = [0xEA]                                        # nop
+        self.assertEqual(str(disassemble(mem, 0)), "nop")
+        gated = disassemble(mem, 0, unsupported=frozenset([0xEA]))
+        self.assertEqual(str(gated), ".byte 0xea")
+        self.assertTrue(gated.illegal)
+
+    def test_gating_plumbed_through_build(self):
+        from m740dasm import command
+        rom = bytearray(0x10000)
+        rom[0x8000:0x8002] = bytes([0xEA, 0x60])            # nop ; rts
+        rom[0xFFFE], rom[0xFFFF] = 0x00, 0x80
+        Devices["_TESTGATE"] = {
+            "vector_table": Devices["M50734"]["vector_table"],
+            "symbol_table": [],
+            "unsupported_opcodes": frozenset([0xEA]),
+        }
+        self.addCleanup(lambda: Devices.pop("_TESTGATE", None))
+        memory, _ = command.build_disassembly(bytes(rom), "_TESTGATE", 0)
+        inst = memory.get_instruction(0x8000)
+        self.assertTrue(inst.illegal)                       # nop gated -> data
+
+
+if __name__ == "__main__":
+    unittest.main()
