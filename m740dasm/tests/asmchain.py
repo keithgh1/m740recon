@@ -95,12 +95,16 @@ def assemble(asm_text, org, size):
         src = os.path.join(workdir, "u.asm")
         with open(src, "w", newline="\n") as f:
             f.write(asm_text)
+        # stdin=DEVNULL: as740/aslink read no input, and not inheriting the
+        # process stdin handle avoids an intermittent WinError 6 ("handle is
+        # invalid") raised by subprocess under pytest's fd-level capture on
+        # Windows, where the inherited STD_INPUT_HANDLE can be invalid.
         r = subprocess.run([as740, "-l", "-o", "u.asm"], cwd=workdir,
-                           capture_output=True, text=True)
+                           stdin=subprocess.DEVNULL, capture_output=True, text=True)
         if r.returncode != 0:
             raise RuntimeError("as740 failed:\n" + r.stdout + r.stderr)
         r = subprocess.run([aslink, "-i", "u"], cwd=workdir,
-                           capture_output=True, text=True)
+                           stdin=subprocess.DEVNULL, capture_output=True, text=True)
         if r.returncode != 0:
             raise RuntimeError("aslink failed:\n" + r.stdout + r.stderr)
         with open(os.path.join(workdir, "u.ihx")) as f:

@@ -76,6 +76,74 @@ DISPATCH_CONTROL = (
     "addrtable 0x8100 stride=3 entryoff=1 terminator=0x00 label=h_\n")
 
 
+def example_control_image():
+    """A small top-loaded ROM that exercises every listing-affecting control
+    directive together (label, entry, comment, range text/word/addr, and an
+    addrtable), kept tiny so the golden it freezes stays human-reviewable.
+
+    It is the compact, segment-free analogue of docs/example.m740: that file
+    documents the same directives on a realistic image but uses `segment`,
+    which forces the listing to walk from 0x0000 and emit ~64K of filler --
+    unusable as a golden.  Segment image-building is covered by test_control's
+    build_image tests instead.
+
+    A full 64K image (content at the top, zeros below) is returned rather than a
+    top-loaded slice: addrtable resolution reads the raw image at absolute
+    addresses (control.resolve_tables), so the table only decodes when the image
+    spans those addresses.  The golden test keeps the output small by passing
+    start_address=0xffd0, so the Printer emits only the populated top region.
+
+    Layout (device M50734; content at 0xffd0):
+        ffd0 reset      lda scratch_a; sta scratch_b; jsr helper; rts
+        ffd8 helper     lda #0xAA; rts                  (named jsr target)
+        ffdb stepper_isr lda #0xBB; rts                 (reached only via `entry`)
+        ffde .text      "Hi" 00 "!"                     (range text)
+        ffe2 .word      0x1234                          (range word)
+        ffe4 .addr      -> helper                       (range addr, substituted)
+        ffe6 cmd_A      lda #0x01; rts                  (addrtable handler)
+        ffe9 cmd_B      lda #0x02; rts                  (addrtable handler)
+        ffec addrtable  ['A',->cmd_A]['B',->cmd_B] 00
+    """
+    def put(addr, data):
+        img[addr:addr + len(data)] = bytes(data)
+
+    img = _blank()
+    put(0xffd0, [0xA5, 0x10,        # lda scratch_a
+                 0x85, 0x11,        # sta scratch_b
+                 0x20, 0xD8, 0xFF,  # jsr helper (0xffd8)
+                 0x60])             # rts
+    put(0xffd8, [0xA9, 0xAA, 0x60])             # helper:      lda #0xAA ; rts
+    put(0xffdb, [0xA9, 0xBB, 0x60])             # stepper_isr: lda #0xBB ; rts
+    put(0xffde, [0x48, 0x69, 0x00, 0x21])       # text "Hi" NUL "!"
+    put(0xffe2, [0x34, 0x12])                   # word 0x1234
+    put(0xffe4, [0xD8, 0xFF])                   # addr -> helper (0xffd8)
+    put(0xffe6, [0xA9, 0x01, 0x60])             # cmd_A: lda #0x01 ; rts
+    put(0xffe9, [0xA9, 0x02, 0x60])             # cmd_B: lda #0x02 ; rts
+    put(0xffec, [0x41, 0xE6, 0xFF,              # 'A' -> cmd_A (0xffe6)
+                 0x42, 0xE9, 0xFF,              # 'B' -> cmd_B (0xffe9)
+                 0x00])                         # terminator
+    put(0xfffe, [0xD0, 0xFF])                   # reset vector -> 0xffd0
+    return bytes(img)
+
+
+# The compact control that drives example_control_image().  Parallels
+# docs/example.m740 directive-for-directive, minus `segment` (see the fixture
+# docstring).  Device is M50734 to match the existing golden convention.
+EXAMPLE_CONTROL = (
+    "device M50734\n"
+    'label 0x0010 scratch_a "working byte seeded at reset"\n'
+    "label 0x0011 scratch_b\n"
+    'label 0xffd0 reset "power-on reset: seed scratch, call helper, return"\n'
+    'label 0xffd8 helper "load the standby pattern (0xAA)"\n'
+    'entry 0xffdb stepper_isr "carriage-motor step ISR; reached only via computed jump"\n'
+    'comment 0xffec "host-command dispatch table: command byte -> handler"\n'
+    "range 0xffde 0xffe2 text\n"
+    "range 0xffe2 0xffe4 word\n"
+    "range 0xffe4 0xffe6 addr\n"
+    "addrtable 0xffec stride=3 entryoff=1 terminator=0x00 label=cmd_ names=ascii\n"
+)
+
+
 def computed_jump_image():
     """A 64K image whose only path to a handler is a constant jmp [zp]."""
     img = _blank()

@@ -1,0 +1,116 @@
+# ===========================================================================
+# example.m740 -- a complete, annotated m740dasm control file
+#
+# This is a worked example that exercises every control-file directive against
+# one (hypothetical) car-radio firmware built around an M3886.  Read it top to
+# bottom: the directives are grouped the way you actually discover the facts
+# while reverse-engineering -- device first, then the memory map, then code,
+# then data.  Every directive type appears at least once.
+#
+#   $ m740dasm -c example.m740            > radio.asm   # listing
+#   $ m740dasm -c example.m740 -a -x      > radio.asm   # + analysis + xrefs
+#   $ m740dasm -c example.m740 --call-graph                # report instead
+#
+# Note there is NO binary argument on those commands.  Because this file defines
+# `segment` directives (below), m740dasm builds the image from them -- the ROM
+# is named on the `segment rom ... firmware.bin` line, not on the command line.
+# Passing a binary as well is an error.  A control file with no `segment` lines
+# works the other way: there you DO pass the ROM, e.g. `m740dasm -c fw.m740 rom.bin`.
+#
+# Syntax reminders:
+#   - one directive per line; '#' starts a comment
+#   - numbers are C-style: 0x8000 (hex), 0o17 (octal), 4660 (decimal)
+#   - a quoted string groups a comment that contains spaces
+#   - for any address, the first directive to name it wins; the automatic
+#     symbol generator never overwrites a name or comment you supply here
+# ===========================================================================
+
+
+# --- Device -----------------------------------------------------------------
+# Selects the SFR names, the interrupt/reset vector layout, and the set of
+# opcodes the core does not implement.  M3886 is m740dasm's default, but state
+# it anyway so the control file is self-describing and '-m' is never required.
+device M3886
+
+
+# --- Memory map (segments) --------------------------------------------------
+# A `segment` builds the 64 KiB image from slices.  As soon as ANY segment is
+# present, m740dasm assembles the image itself and you pass NO binary argument.
+# Use segments whenever the ROM is not a single chunk at the top of memory:
+# a RAM/ROM split, a separate boot ROM, or banked images.
+#
+#   segment NAME START END SOURCE        SOURCE = zero | PATH | PATH@FILEOFFSET
+#
+# (For a plain ROM that already sits at the top of memory you can skip segments
+# entirely and just run `m740dasm firmware.bin` -- the file is aligned to 0xFFFF
+# automatically.  The map below is the explicit, self-contained form.)
+segment ram 0x0000 0x8000  zero          # SFRs + RAM + unused space: no ROM here
+segment rom 0x8000 0x10000 firmware.bin  # 32 KiB mask ROM, occupies 0x8000-0xFFFF
+
+
+# --- RAM variables (labels for zero-page state) -----------------------------
+# `label ADDR NAME ["comment"]` names an address without tracing it.  Zero-page
+# names are emitted as equates at the top of the listing, so their comments are
+# visible there; they also annotate every instruction that touches them.
+label 0x0040 vol_current  "current volume, 0..63"
+label 0x0041 vol_target   "volume the fader is ramping toward"
+label 0x0042 tuner_freq_lo
+label 0x0043 tuner_freq_hi "tuned frequency, 16-bit little-endian (lo at 0x42)"
+label 0x0050 host_cmd     "command byte currently being dispatched"
+label 0x0051 jump_vec_lo  "computed-jump target for the keypad handler (lo)"
+
+
+# --- Named routines (labels for code already in the trace) ------------------
+# The reset and interrupt handlers are reached through the vectors, so the
+# tracer already finds them; these `label`s just give them readable names
+# instead of the automatic sub_xxxx / lab_xxxx.
+label 0x8000 reset        "power-on reset: clear RAM, init SFRs, fall into main"
+label 0x8533 main_loop    "read one host command and dispatch it"
+label 0x8a90 fader_step   "nudge vol_current one step toward vol_target"
+label 0x9a40 irq_timer_x  "Timer X underflow: 1 ms system tick"
+label 0x9b10 irq_sio_rx   "SIO1 receive: one byte from the CD-changer bus"
+
+
+# --- Entry points (trace code the default pass cannot reach) ----------------
+# `entry ADDR [NAME] ["comment"]` is `label` plus "start tracing here".  Use it
+# only for code reached some way the static trace misses -- a computed jump, or
+# a pointer table that is rendered but not followed.  Without these two lines
+# the bytes below would be left as data.
+entry 0xab00 keypad_scan  "entered only via jmp (jump_vec_lo); scans the keypad"
+entry 0x9c80 cdc_parse    "CD-changer message parser; reached via tbl_handlers"
+
+
+# --- Comments (free-text notes pinned to an address) ------------------------
+# `comment ADDR "text"` attaches a note to any address; it prints as a ';' line
+# directly above that location every time the listing reaches it.  This is the
+# place for board-specific wiring and hardware behaviour the SFR name alone does
+# not convey.  (A quoted comment on `label`/`entry` renders the same way.)
+comment 0x0004 "Port P2: P2.0-3 -> tuner PLL (I2C); P2.4 -> audio mute relay; P2.7 -> dial lamp"
+comment 0x001e "WDTCON: the 1 ms tick writes here to kick the watchdog"
+comment 0x8533 "dispatch: host_cmd -> tbl_handlers index; unknown commands are ignored"
+
+
+# --- Typed data ranges ------------------------------------------------------
+# `range START END KIND` carves a region out of the code trace and renders it
+# in a meaningful form:
+#   byte  raw bytes (.byte)             word  16-bit little-endian values (.word)
+#   addr  16-bit pointers, rendered as .word with the target symbol substituted
+#   text  ASCII (.ascii runs; .byte for anything non-printable, e.g. NUL)
+# word/addr ranges must have an even length.
+range 0xc000 0xc040 text   # band-name strings: "FM1\0FM2\0AM\0..." shown to the user
+range 0xc040 0xc060 word   # per-band tuning step in kHz, one .word each
+range 0xc060 0xc080 addr   # tbl_handlers: 16 pointers into ROM, symbol-substituted
+
+
+# --- Address table (decode a dispatch table into named, traced handlers) ----
+# `addrtable START [opts]` walks a table of code pointers, renders each as a
+# .word, traces the target as code, and names it label= + the entry's key.
+# Here the host-command table at 0xc0d4 has 3-byte entries laid out as
+#   [command-byte, handler-lo, handler-hi]
+# and ends at the first entry whose command byte is 0x00.  names=ascii turns
+# control-code keys into mnemonics, so e.g. key 'M' -> cmd_M, key 0x0d -> cmd_CR.
+#
+#   stride=N      bytes per entry            entryoff=K  offset of the 2-byte ptr
+#   terminator=V  stop when entry[0]==V      end=ADDR / count=N  alternative bounds
+#   label=PREFIX  name targets PREFIX+key    names=ascii apply ASCII mnemonics
+addrtable 0xc0d4 stride=3 entryoff=1 terminator=0x00 label=cmd_ names=ascii
