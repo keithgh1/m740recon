@@ -105,6 +105,12 @@ $ ./venv/bin/m740recon -c firmware.m740 --json > report.json
 $ python report_to_dot.py report.json main_loop 2 | dot -Tsvg -o callgraph.svg
 ```
 
+For example, here is a call graph rendered from real firmware — the *print path* of a Star NX-1020 dot-matrix printer (an M50734-based device), from the line/print dispatcher down to the routine that fires the print head:
+
+![Star NX-1020 print-path call graph](docs/nx1020_printpath.png)
+
+The boxes are subroutines that m740recon traced and named, joined by the call and tail-call edges it recovered; the short descriptions are annotations added by hand to make the path readable.  The Graphviz source for this diagram is included at [`docs/nx1020_printpath.dot`](docs/nx1020_printpath.dot).
+
 ## Testing
 
 ```
