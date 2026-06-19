@@ -107,7 +107,15 @@ def assemble(asm_text, org, size):
                            stdin=subprocess.DEVNULL, capture_output=True, text=True)
         if r.returncode != 0:
             raise RuntimeError("aslink failed:\n" + r.stdout + r.stderr)
-        with open(os.path.join(workdir, "u.ihx")) as f:
+        # aslink's Intel-HEX output extension varies across ASxxxx builds
+        # (.ihx on some, .hex on others), so read whichever was produced.
+        ihx = next((os.path.join(workdir, "u." + ext) for ext in ("ihx", "hex")
+                    if os.path.exists(os.path.join(workdir, "u." + ext))), None)
+        if ihx is None:
+            raise RuntimeError(
+                "aslink produced no Intel-HEX output (u.ihx/u.hex); workdir %s:\n%s%s"
+                % (sorted(os.listdir(workdir)), r.stdout, r.stderr))
+        with open(ihx) as f:
             mem = parse_ihx(f.read())
         out = bytearray(size)
         for addr, v in mem.items():
