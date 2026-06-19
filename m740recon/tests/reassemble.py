@@ -1,6 +1,6 @@
 """Reassembly-fidelity helper.
 
-The defining guarantee of m740dasm is that its listing reassembles to a
+The defining guarantee of m740recon is that its listing reassembles to a
 bit-for-bit copy of the input.  as740 is the ultimate proof of that, but it is
 an external tool that is not always present.  This module provides a pure-Python
 proxy: it reconstructs the raw image from the classified Memory exactly the way
@@ -17,7 +17,7 @@ coverage is the job of the trace/analyze tests.  Instruction *operand* encoding
 is covered separately by the per-opcode tests in test_disasm.py.
 """
 
-from m740dasm.memory import LocationTypes
+from m740recon.memory import LocationTypes
 
 
 def reconstruct(memory):

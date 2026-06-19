@@ -1,6 +1,6 @@
 import unittest
-from m740dasm.disasm import disassemble
-from m740dasm.tables import AddressModes
+from m740recon.disasm import disassemble
+from m740recon.tables import AddressModes
 
 
 class disassemble_tests(unittest.TestCase):

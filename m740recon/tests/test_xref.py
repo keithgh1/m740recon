@@ -2,8 +2,8 @@
 
 import unittest
 
-from m740dasm import control
-from m740dasm.tests import asmchain
+from m740recon import control
+from m740recon.tests import asmchain
 
 
 def _image():

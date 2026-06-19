@@ -1,6 +1,6 @@
 import os
 from operator import attrgetter
-from m740dasm.tables import AddressModes, FlowTypes
+from m740recon.tables import AddressModes, FlowTypes
 
 class Tracer(object):
     def __init__(self, memory, entry_points, vectors, traceable_range,

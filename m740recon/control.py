@@ -2,7 +2,7 @@
 
 A control file lets a user supply disassembly facts -- which device, which
 addresses contain code, and what to name them -- without editing the source of
-m740dasm.  It is a simple line-oriented text format in the spirit of da65's
+m740recon.  It is a simple line-oriented text format in the spirit of da65's
 info file.
 
 Format (one directive per line; '#' starts a comment; quotes group a comment
@@ -35,7 +35,7 @@ import os
 import shlex
 from collections import namedtuple
 
-from m740dasm.symbols import Symbol
+from m740recon.symbols import Symbol
 
 # A memory segment: bytes for [start, end) sourced from a file slice or zeros.
 Segment = namedtuple("Segment", "name start end kind path off")

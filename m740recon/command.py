@@ -1,5 +1,5 @@
 '''
-Usage: m740dasm [-m MCUtype] [-c controlfile] [<filename.bin>]
+Usage: m740recon [-m MCUtype] [-c controlfile] [<filename.bin>]
 
 Options:
   -m, --mcutype TYPE   select the MCU type (default: M3886)
@@ -23,13 +23,13 @@ Options:
 
 import sys, getopt
 
-from m740dasm.disasm import disassemble
-from m740dasm.trace import Tracer
-from m740dasm.memory import Memory
-from m740dasm.listing import Printer
-from m740dasm.symbols import SymbolTable
-from m740dasm.devices import Devices
-from m740dasm import control
+from m740recon.disasm import disassemble
+from m740recon.trace import Tracer
+from m740recon.memory import Memory
+from m740recon.listing import Printer
+from m740recon.symbols import SymbolTable
+from m740recon.devices import Devices
+from m740recon import control
 
 
 def build_disassembly(rom, device, start_address, entry_points=(),
@@ -207,7 +207,7 @@ def main():
                                              **kwargs)
 
     if json_report or callgraph_report:
-        from m740dasm import report
+        from m740recon import report
         model = report.build_model(memory, symbol_table, start_address,
                                    len(rom), selected_device)
         if json_report:

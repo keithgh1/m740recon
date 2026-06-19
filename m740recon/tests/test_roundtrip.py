@@ -7,9 +7,9 @@ bytes match the image.  Runs in milliseconds, so it can gate every change.
 
 import unittest
 
-from m740dasm import command, control
-from m740dasm.tests import fixtures
-from m740dasm.tests.reassemble import assert_roundtrip
+from m740recon import command, control
+from m740recon.tests import fixtures
+from m740recon.tests.reassemble import assert_roundtrip
 
 
 class RoundTripTests(unittest.TestCase):

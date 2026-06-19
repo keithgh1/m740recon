@@ -1,5 +1,5 @@
 # ===========================================================================
-# example.m740 -- a complete, annotated m740dasm control file
+# example.m740 -- a complete, annotated m740recon control file
 #
 # This is a worked example that exercises every control-file directive against
 # one (hypothetical) car-radio firmware built around an M3886.  Read it top to
@@ -7,15 +7,15 @@
 # while reverse-engineering -- device first, then the memory map, then code,
 # then data.  Every directive type appears at least once.
 #
-#   $ m740dasm -c example.m740            > radio.asm   # listing
-#   $ m740dasm -c example.m740 -a -x      > radio.asm   # + analysis + xrefs
-#   $ m740dasm -c example.m740 --call-graph                # report instead
+#   $ m740recon -c example.m740            > radio.asm   # listing
+#   $ m740recon -c example.m740 -a -x      > radio.asm   # + analysis + xrefs
+#   $ m740recon -c example.m740 --call-graph                # report instead
 #
 # Note there is NO binary argument on those commands.  Because this file defines
-# `segment` directives (below), m740dasm builds the image from them -- the ROM
+# `segment` directives (below), m740recon builds the image from them -- the ROM
 # is named on the `segment rom ... firmware.bin` line, not on the command line.
 # Passing a binary as well is an error.  A control file with no `segment` lines
-# works the other way: there you DO pass the ROM, e.g. `m740dasm -c fw.m740 rom.bin`.
+# works the other way: there you DO pass the ROM, e.g. `m740recon -c fw.m740 rom.bin`.
 #
 # Syntax reminders:
 #   - one directive per line; '#' starts a comment
@@ -28,21 +28,21 @@
 
 # --- Device -----------------------------------------------------------------
 # Selects the SFR names, the interrupt/reset vector layout, and the set of
-# opcodes the core does not implement.  M3886 is m740dasm's default, but state
+# opcodes the core does not implement.  M3886 is m740recon's default, but state
 # it anyway so the control file is self-describing and '-m' is never required.
 device M3886
 
 
 # --- Memory map (segments) --------------------------------------------------
 # A `segment` builds the 64 KiB image from slices.  As soon as ANY segment is
-# present, m740dasm assembles the image itself and you pass NO binary argument.
+# present, m740recon assembles the image itself and you pass NO binary argument.
 # Use segments whenever the ROM is not a single chunk at the top of memory:
 # a RAM/ROM split, a separate boot ROM, or banked images.
 #
 #   segment NAME START END SOURCE        SOURCE = zero | PATH | PATH@FILEOFFSET
 #
 # (For a plain ROM that already sits at the top of memory you can skip segments
-# entirely and just run `m740dasm firmware.bin` -- the file is aligned to 0xFFFF
+# entirely and just run `m740recon firmware.bin` -- the file is aligned to 0xFFFF
 # automatically.  The map below is the explicit, self-contained form.)
 segment ram 0x0000 0x8000  zero          # SFRs + RAM + unused space: no ROM here
 segment rom 0x8000 0x10000 firmware.bin  # 32 KiB mask ROM, occupies 0x8000-0xFFFF

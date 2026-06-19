@@ -1,6 +1,6 @@
 """End-to-end reassembly via the real as740 assembler + aslink linker.
 
-This is the authoritative proof of m740dasm's defining guarantee: that its
+This is the authoritative proof of m740recon's defining guarantee: that its
 listing assembles, bit-for-bit, back to the original image.  It shells out to
 the actual ASxxxx tools (as740, aslink), parses the Intel-HEX they emit (so no
 dependency on srec_cat), and returns the assembled bytes for comparison.
@@ -14,7 +14,7 @@ import subprocess
 import tempfile
 import unittest
 
-from m740dasm.listing import Printer
+from m740recon.listing import Printer
 
 
 class ToolNotFound(Exception):
@@ -43,7 +43,7 @@ def tools_available():
         return False
 
 
-# as740/aslink are NOT distributed with m740dasm.  The end-to-end reassembly
+# as740/aslink are NOT distributed with m740recon.  The end-to-end reassembly
 # checks need them, so by default those tests skip when the toolchain is
 # absent and the suite still passes.  Set M740_REQUIRE_AS740=1 to turn a
 # missing toolchain into a hard failure instead (for a maintainer's CI that
@@ -133,7 +133,7 @@ def disasm_text(rom, device="M3886", start_address=None, entry_points=(),
     """
     import io
     import sys
-    from m740dasm import command
+    from m740recon import command
 
     if start_address is None:
         start_address = 0x10000 - len(rom)

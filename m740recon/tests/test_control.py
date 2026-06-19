@@ -2,8 +2,8 @@ import os
 import tempfile
 import unittest
 
-from m740dasm import control
-from m740dasm.tests import asmchain
+from m740recon import control
+from m740recon.tests import asmchain
 
 
 class ControlParseTests(unittest.TestCase):
@@ -220,7 +220,7 @@ class ControlNamedHandlerTests(unittest.TestCase):
         cf = control.parse(
             "addrtable 0x8100 stride=3 entryoff=1 terminator=0x00"
             " label=ctl_ names=ascii\n")
-        from m740dasm.tests import fixtures
+        from m740recon.tests import fixtures
         img = bytearray(fixtures.dispatch_image())
         # rewrite the table keys to control codes so names=ascii applies
         img[0x8100] = 0x07          # BEL

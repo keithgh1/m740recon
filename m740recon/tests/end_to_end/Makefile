@@ -13,7 +13,7 @@ testprog.bin:
 	srec_cat testprog.hex -intel -offset -0x8000 -o testprog.bin -binary
 
 reassembled.bin: testprog.bin
-	m740dasm testprog.bin > reassembled.asm
+	m740recon testprog.bin > reassembled.asm
 	as740 -l -o reassembled.asm
 	aslink -i reassembled
 	srec_cat reassembled.hex -intel -offset -0x8000 -o reassembled.bin -binary

@@ -20,7 +20,7 @@ instruction alone and are reported as a count instead of as edges.
 import bisect
 import json
 
-from m740dasm.tables import FlowTypes
+from m740recon.tables import FlowTypes
 
 _CALL_FLOWS = frozenset((FlowTypes.SubroutineCall,))
 # A tail call is an *unconditional* jump into another routine.  A conditional
@@ -125,7 +125,7 @@ def build_model(memory, symbol_table, start_address, image_len, device=None):
 
     return {
         "meta": {
-            "format": "m740dasm-report/1",
+            "format": "m740recon-report/1",
             "device": device,
             "start": _hex(start_address),
             "length": image_len,
@@ -157,7 +157,7 @@ def to_json(model):
 def format_call_graph(model):
     """Render a model as a human-readable call-graph report."""
     meta = model["meta"]
-    lines = ["; m740dasm call graph",
+    lines = ["; m740recon call graph",
              "; device %s, %d routines, %d call edges" % (
                  meta["device"] or "?", meta["routine_count"],
                  meta["call_edge_count"])]

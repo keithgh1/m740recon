@@ -1,8 +1,8 @@
 import re
 import unittest
-from m740dasm import symbols, memory, disasm
-from m740dasm.devices import Devices
-from m740dasm.tables import AddressModes
+from m740recon import symbols, memory, disasm
+from m740recon.devices import Devices
+from m740recon.tables import AddressModes
 
 class SymbolCreatingAnalyzerTests(unittest.TestCase):
 

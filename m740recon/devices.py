@@ -9,7 +9,7 @@ uses.  A device may declare unsupported_opcodes (opcodes its core lacks),
 which the decoder renders as data; the default empty set changes nothing.
 """
 
-from m740dasm.symbols import Symbol
+from m740recon.symbols import Symbol
 
 Devices = {}
 _DEFS = {}

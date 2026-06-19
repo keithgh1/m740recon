@@ -2,8 +2,8 @@
 
 import unittest
 
-from m740dasm.devices import Devices
-from m740dasm.disasm import disassemble
+from m740recon.devices import Devices
+from m740recon.disasm import disassemble
 
 
 class DeviceResolutionTests(unittest.TestCase):
@@ -40,7 +40,7 @@ class OpcodeGatingTests(unittest.TestCase):
         self.assertTrue(gated.illegal)
 
     def test_gating_plumbed_through_build(self):
-        from m740dasm import command
+        from m740recon import command
         rom = bytearray(0x10000)
         rom[0x8000:0x8002] = bytes([0xEA, 0x60])            # nop ; rts
         rom[0xFFFE], rom[0xFFFF] = 0x00, 0x80

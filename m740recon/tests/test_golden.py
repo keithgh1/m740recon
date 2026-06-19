@@ -5,14 +5,14 @@ changes to the tool's output become visible in review.  The image is kept
 small on purpose so the golden stays human-reviewable; the zero-page equate
 and reassembly paths are covered separately by test_roundtrip and the as740
 end-to-end tests.  Regenerate intentionally with:
-    python -m m740dasm.tests.test_golden --update
+    python -m m740recon.tests.test_golden --update
 """
 
 import os
 import sys
 import unittest
 
-from m740dasm.tests import asmchain, fixtures
+from m740recon.tests import asmchain, fixtures
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 GOLDEN = os.path.join(HERE, "golden", "snapshot.asm")

@@ -1,4 +1,4 @@
-from m740dasm.tables import (
+from m740recon.tables import (
     AddressModes,
     FlowTypes,
     InstructionLengths,

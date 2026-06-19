@@ -3,7 +3,7 @@
 import json
 import unittest
 
-from m740dasm import command, report
+from m740recon import command, report
 
 
 def _image():

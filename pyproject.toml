@@ -2,18 +2,18 @@
 requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
-[tool.setuptools.packages]
-find = {}
+[tool.setuptools.packages.find]
+include = ["m740recon*"]
 
 [project]
-name = "m740dasm"
-version = "1.0.0.dev0"
-description = "Renesas (Mitsubishi) 740 disassembler"
+name = "m740recon"
+version = "1.0.0"
+description = "Advanced disassembler and analyzer for Renesas (Mitsubishi) 740 microcontrollers"
 authors = [
-    { name = "Mike Naberezny", email = "mike@naberezny.com" }
+    { name = "Keith Monahan", email = "keith@techtravels.org" }
 ]
 maintainers = [
-    { name = "Mike Naberezny", email = "mike@naberezny.com" }
+    { name = "Keith Monahan", email = "keith@techtravels.org" }
 ]
 readme = "README.md"
 requires-python = ">=3.8"
@@ -47,4 +47,9 @@ test = [
 ]
 
 [project.scripts]
-m740dasm = "m740dasm.command:main"
+m740recon = "m740recon.command:main"
+
+[project.urls]
+Homepage = "https://github.com/keithgh1/m740recon"
+Repository = "https://github.com/keithgh1/m740recon"
+Original = "https://github.com/mnaberez/m740dasm"

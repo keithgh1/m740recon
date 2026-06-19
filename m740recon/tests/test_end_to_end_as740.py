@@ -1,8 +1,8 @@
 """End-to-end reassembly tests using the real as740 + aslink.
 
-These enforce m740dasm's defining guarantee directly with the actual assembler:
+These enforce m740recon's defining guarantee directly with the actual assembler:
 the listing must assemble bit-for-bit back to the input image.  as740/aslink
-are NOT distributed with m740dasm, so by default these tests SKIP when the
+are NOT distributed with m740recon, so by default these tests SKIP when the
 toolchain is absent (the suite still passes, and the pure-Python structural
 round-trip in test_roundtrip keeps re-encoding verified).  Set
 M740_REQUIRE_AS740=1 to make a missing toolchain a hard failure instead.
@@ -14,8 +14,8 @@ external ROM image is required.
 import os
 import unittest
 
-from m740dasm import control
-from m740dasm.tests import asmchain, fixtures
+from m740recon import control
+from m740recon.tests import asmchain, fixtures
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 TESTPROG = os.path.join(HERE, "end_to_end", "testprog.asm")

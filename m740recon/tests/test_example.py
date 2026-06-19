@@ -14,15 +14,15 @@ Two complementary guards keep docs/example.m740 from rotting:
     silently lose the directives it claims to demonstrate.
 
 Regenerate the golden intentionally with:
-    python -m m740dasm.tests.test_example --update
+    python -m m740recon.tests.test_example --update
 """
 
 import os
 import sys
 import unittest
 
-from m740dasm import control
-from m740dasm.tests import asmchain, fixtures
+from m740recon import control
+from m740recon.tests import asmchain, fixtures
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 GOLDEN = os.path.join(HERE, "golden", "example_listing.asm")
