@@ -111,6 +111,69 @@ For example, here is a call graph rendered from real firmware — the *print pat
 
 The boxes are subroutines that m740recon traced and named, joined by the call and tail-call edges it recovered; the short descriptions are annotations added by hand to make the path readable.  The Graphviz source for this diagram is included at [`docs/nx1020_printpath.dot`](docs/nx1020_printpath.dot).
 
+## Supported devices
+
+m740recon ships with definitions for 24 740-family parts, selectable by 48 names: the 24 part names plus 24 aliases for sibling part numbers and alternate spellings (some parts have several aliases, many have none).  Choose a device with `-m`, or with the `device` directive in a control file (`-c`); an explicit `-m` takes precedence over the control file.  The default is `M3886`.
+
+```
+$ ./venv/bin/m740recon -m M50734 input.bin > output.asm
+```
+
+Names are case-sensitive and must match exactly.  Passing an unrecognized name prints the full list of accepted names:
+
+```
+$ ./venv/bin/m740recon -m bogus input.bin
+Unsupported MCU type requested (bogus)! Currently supported: ...
+```
+
+A device definition supplies the interrupt/reset **vector table** and a **symbol table** that names the special-function registers (SFRs), I/O ports, and vectors of that part, so the listing reads in datasheet terms instead of bare addresses.  Devices are organized as a base/group/part inheritance hierarchy in [`m740recon/devices.py`](m740recon/devices.py): a group base (for example the shared core behind `M3802`/`M3807`/`M3886`) defines the common vectors and ports, and each part inherits it and then adds or overrides its own SFRs.  A device may also declare opcodes its core does not implement so they decode as data rather than instructions; the hook exists but no bundled device currently needs it.
+
+Note the mix of naming conventions: a few parts carry an `M` prefix (`M3886`, `M3802`, `M3807`) while most are bare numbers (`50734`, `50740A`, `37410M3`).  The familiar `M3xxxx`/`M5xxxx` spellings (`M37450`, `M37451`, `M50734`) are provided as aliases of the bare-number entries.
+
+### Hand-curated cores
+
+Vectors and SFR names for these cores are hand-verified; a datasheet-sourced reference register map for each is included in [`docs/`](docs) (one file per core).
+
+| Device | Aliases | Reset vector |
+|---|---|---|
+| `7450` | `M37450`, `37450S1`, `37450M4`, `37450M8`, `37450S2`, `37450S4` | 0xFFFE |
+| `7451` | `M37451` | 0xFFFE |
+| `M3802` | — | 0xFFFC |
+| `M3807` | — | 0xFFFC |
+| `M3886` | — | 0xFFFC |
+| `50734` | `M50734`, `50734_10` | 0xFFFE |
+
+### MELPS 740 devices (datasheet-derived)
+
+These entries were generated from the MELPS 740 databook.  Their **vectors and register addresses are datasheet-derived and reliable**, but the SFR symbol *names* are heuristic and may be refined — treat the mnemonics as a starting point.  None overlaps a hand-curated core above.
+
+| Device | Aliases | Reset vector |
+|---|---|---|
+| `50740A` | `50741` | 0x1FFE |
+| `50742` | `50708` | 0xFFFE |
+| `50743` | — | 0xFFFE |
+| `50744` | `50746` | 0xFFFE |
+| `50745` | — | 0xFFFE |
+| `50747` | `50747H` | 0xFFFE |
+| `50752` | `50757`, `50758` | 0x1FFE |
+| `50753` | — | 0xFFFE |
+| `50754` | `50954`, `50955` | 0xFFFE |
+| `50930` | `50931`, `50932` | 0x3FFE |
+| `50940` | `50941` | 0xFFFE |
+| `50943` | — | 0xFFFE |
+| `50944` | — | 0xFFFE |
+| `50950` | `50951` | 0xFFFE |
+| `50957` | `50959` | 0xFFFE |
+| `50964` | `50963` | 0xFFFE |
+| `37410M3` | `37410M4` | 0x3FFE |
+| `37415M4` | — | 0x3FFE |
+
+A few parts place their vectors well below the top of a 64K image — `50740A`/`50752` at `0x1FFE` (an 8K space) and `50930`/`37410M3`/`37415M4` at `0x3FFE` (a 16K space).  These are not top-aligned 64K ROMs, so describe their layout with a control-file memory map (`-c`) rather than passing a plain top-aligned binary (see [Usage](#usage)).
+
+### Adding a device
+
+To add a part, add a `_define(...)` entry to [`m740recon/devices.py`](m740recon/devices.py) — optionally inheriting an existing base — plus any `_alias(...)` lines for sibling part numbers that share its register map.  No other code changes are required: the new name becomes a valid `-m` value automatically.
+
 ## Testing
 
 ```
