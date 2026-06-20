@@ -134,39 +134,39 @@ Note the mix of naming conventions: a few parts carry an `M` prefix (`M3886`, `M
 
 Vectors and SFR names for these cores are hand-verified; a datasheet-sourced reference register map for each is included in [`docs/`](docs) (one file per core).
 
-| Device | Aliases | Reset vector |
-|---|---|---|
-| `7450` | `M37450`, `37450S1`, `37450M4`, `37450M8`, `37450S2`, `37450S4` | 0xFFFE |
-| `7451` | `M37451` | 0xFFFE |
-| `M3802` | — | 0xFFFC |
-| `M3807` | — | 0xFFFC |
-| `M3886` | — | 0xFFFC |
-| `50734` | `M50734`, `50734_10` | 0xFFFE |
+| Device | Aliases |
+|---|---|
+| `7450` | `M37450`, `37450S1`, `37450M4`, `37450M8`, `37450S2`, `37450S4` |
+| `7451` | `M37451` |
+| `M3802` | — |
+| `M3807` | — |
+| `M3886` | — |
+| `50734` | `M50734`, `50734_10` |
 
 ### MELPS 740 devices (datasheet-derived)
 
 These entries were generated from the MELPS 740 databook.  Their **vectors and register addresses are datasheet-derived and reliable**, but the SFR symbol *names* are heuristic and may be refined — treat the mnemonics as a starting point.  None overlaps a hand-curated core above.
 
-| Device | Aliases | Reset vector |
-|---|---|---|
-| `50740A` | `50741` | 0x1FFE |
-| `50742` | `50708` | 0xFFFE |
-| `50743` | — | 0xFFFE |
-| `50744` | `50746` | 0xFFFE |
-| `50745` | — | 0xFFFE |
-| `50747` | `50747H` | 0xFFFE |
-| `50752` | `50757`, `50758` | 0x1FFE |
-| `50753` | — | 0xFFFE |
-| `50754` | `50954`, `50955` | 0xFFFE |
-| `50930` | `50931`, `50932` | 0x3FFE |
-| `50940` | `50941` | 0xFFFE |
-| `50943` | — | 0xFFFE |
-| `50944` | — | 0xFFFE |
-| `50950` | `50951` | 0xFFFE |
-| `50957` | `50959` | 0xFFFE |
-| `50964` | `50963` | 0xFFFE |
-| `37410M3` | `37410M4` | 0x3FFE |
-| `37415M4` | — | 0x3FFE |
+| Device | Aliases |
+|---|---|
+| `50740A` | `50741` |
+| `50742` | `50708` |
+| `50743` | — |
+| `50744` | `50746` |
+| `50745` | — |
+| `50747` | `50747H` |
+| `50752` | `50757`, `50758` |
+| `50753` | — |
+| `50754` | `50954`, `50955` |
+| `50930` | `50931`, `50932` |
+| `50940` | `50941` |
+| `50943` | — |
+| `50944` | — |
+| `50950` | `50951` |
+| `50957` | `50959` |
+| `50964` | `50963` |
+| `37410M3` | `37410M4` |
+| `37415M4` | — |
 
 A few parts place their vectors well below the top of a 64K image — `50740A`/`50752` at `0x1FFE` (an 8K space) and `50930`/`37410M3`/`37415M4` at `0x3FFE` (a 16K space).  These are not top-aligned 64K ROMs, so describe their layout with a control-file memory map (`-c`) rather than passing a plain top-aligned binary (see [Usage](#usage)).
 
