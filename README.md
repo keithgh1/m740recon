@@ -16,7 +16,7 @@ The underlying disassembler lineage was developed to disassemble the firmware of
 
  - **Symbol generation.**  Hardware registers, vectors, referenced memory locations, branch labels, and subroutines are named automatically instead of writing hardcoded addresses.
 
- - **Declarative control files (`-c`).**  A da65-style control file supplies the device, entry points, labels/comments, a segment memory map, typed data ranges (`byte`/`word`/`addr`/`text`), and address-tables that decode dispatch tables into named handlers — instead of editing source.
+ - **Declarative control files (`-c`).**  A da65-style control file supplies the device, entry points, labels/comments, a segment memory map, typed data ranges (`byte`/`word`/`addr`/`text`), and address-tables that decode dispatch tables into named handlers - instead of editing source.
 
  - **Device hierarchy (`-m`).**  Devices are defined as a base/group/part inheritance hierarchy in `devices.py`, covering the M37450/51, M3802/07/3886, M50734, and many other 740-family parts plus aliases.  A device can also gate opcodes its core does not implement so they decode as data; the hook is in place for cores that need it, though no bundled device currently uses it.
 
@@ -50,14 +50,14 @@ $ ./venv/bin/m740recon input.bin > output.asm
 
 The default MCU type is the `M3886` series.  Other types may be specified with the `-m` option, e.g. `-m M37450` or `-m M50734`.  You can add support for new devices by editing `devices.py`.
 
-For anything beyond a single top-aligned ROM — a RAM/ROM split, additional entry points, dispatch tables, or data regions — supply a control file with `-c` instead of editing source.  A control file gives the device, a segment memory map, entry points, labels and comments, typed data ranges, and address-tables that decode dispatch tables into named handlers:
+For anything beyond a single top-aligned ROM - a RAM/ROM split, additional entry points, dispatch tables, or data regions - supply a control file with `-c` instead of editing source.  A control file gives the device, a segment memory map, entry points, labels and comments, typed data ranges, and address-tables that decode dispatch tables into named handlers:
 
 ```
 $ ./venv/bin/m740recon -c firmware.m740 > output.asm        # device + memory map + labels
 $ ./venv/bin/m740recon -c firmware.m740 -a -x > output.asm  # + analysis + xrefs
 ```
 
-The control-file extension `.m740` refers to the 740 chip family.  A complete, annotated control file that exercises every directive — device, a segment memory map, entry points, labels, comments, typed data ranges, and an address-table — is included at [`docs/example.m740`](docs/example.m740).
+The control-file extension `.m740` refers to the 740 chip family.  A complete, annotated control file that exercises every directive - device, a segment memory map, entry points, labels, comments, typed data ranges, and an address-table - is included at [`docs/example.m740`](docs/example.m740).
 
 Most binaries include some computed jumps.  `-a`/`--analyze` tracks register and zero-page values to resolve `jmp [zp]` / `jsr [zp]` targets, and `--auto-tables` enumerates the ROM jump tables that feed them.  Addresses that still can't be resolved automatically can be named directly in the control file.
 
@@ -74,7 +74,7 @@ $ ./venv/bin/m740recon -c firmware.m740 --json       > report.json     # machine
 
 `--call-graph` lists each routine with the routines it calls and the routines that call it.  `--json` writes a structured model (`m740recon-report/1`): routines (each with its outgoing/incoming call edges), vectors, symbols, and a full cross-reference map.
 
-The JSON model renders into a [Graphviz](https://graphviz.org/) diagram.  A full firmware graph is usually too large to read, so filter to a routine of interest — for example, everything reachable from one routine, two levels deep:
+The JSON model renders into a [Graphviz](https://graphviz.org/) diagram.  A full firmware graph is usually too large to read, so filter to a routine of interest - for example, everything reachable from one routine, two levels deep:
 
 ```python
 # report_to_dot.py: turn `m740recon --json` output into Graphviz
@@ -105,11 +105,13 @@ $ ./venv/bin/m740recon -c firmware.m740 --json > report.json
 $ python report_to_dot.py report.json main_loop 2 | dot -Tsvg -o callgraph.svg
 ```
 
-For example, here is a call graph rendered from real firmware — the *print path* of a Star NX-1020 dot-matrix printer (an M50734-based device), from the line/print dispatcher down to the routine that fires the print head:
+For example, here is a call graph rendered from real firmware - the *print path* of a Star NX-1020 dot-matrix printer (an M50734-based device), from the line/print dispatcher down to the routine that fires the print head:
 
 ![Star NX-1020 print-path call graph](docs/nx1020_printpath.png)
 
 The boxes are subroutines that m740recon traced and named, joined by the call and tail-call edges it recovered; the short descriptions are annotations added by hand to make the path readable.  The Graphviz source for this diagram is included at [`docs/nx1020_printpath.dot`](docs/nx1020_printpath.dot).
+
+The NX-1020 reverse engineering that drove these features is published at [star-nx1020-re](https://github.com/keithgh1/star-nx1020-re): the extracted resident fonts, the labeled firmware disassembly (built with an m740recon control file), an interactive ROM map, and full documentation.
 
 ## Supported devices
 
@@ -138,41 +140,41 @@ Vectors and SFR names for these cores are hand-verified; a datasheet-sourced ref
 |---|---|
 | `7450` | `M37450`, `37450S1`, `37450M4`, `37450M8`, `37450S2`, `37450S4` |
 | `7451` | `M37451` |
-| `M3802` | — |
-| `M3807` | — |
-| `M3886` | — |
+| `M3802` | - |
+| `M3807` | - |
+| `M3886` | - |
 | `50734` | `M50734`, `50734_10` |
 
 ### MELPS 740 devices (datasheet-derived)
 
-These entries were generated from the MELPS 740 databook.  Their **vectors and register addresses are datasheet-derived and reliable**, but the SFR symbol *names* are heuristic and may be refined — treat the mnemonics as a starting point.  None overlaps a hand-curated core above.
+These entries were generated from the MELPS 740 databook.  Their **vectors and register addresses are datasheet-derived and reliable**, but the SFR symbol *names* are heuristic and may be refined - treat the mnemonics as a starting point.  None overlaps a hand-curated core above.
 
 | Device | Aliases |
 |---|---|
 | `50740A` | `50741` |
 | `50742` | `50708` |
-| `50743` | — |
+| `50743` | - |
 | `50744` | `50746` |
-| `50745` | — |
+| `50745` | - |
 | `50747` | `50747H` |
 | `50752` | `50757`, `50758` |
-| `50753` | — |
+| `50753` | - |
 | `50754` | `50954`, `50955` |
 | `50930` | `50931`, `50932` |
 | `50940` | `50941` |
-| `50943` | — |
-| `50944` | — |
+| `50943` | - |
+| `50944` | - |
 | `50950` | `50951` |
 | `50957` | `50959` |
 | `50964` | `50963` |
 | `37410M3` | `37410M4` |
-| `37415M4` | — |
+| `37415M4` | - |
 
-A few parts place their vectors well below the top of a 64K image — `50740A`/`50752` at `0x1FFE` (an 8K space) and `50930`/`37410M3`/`37415M4` at `0x3FFE` (a 16K space).  These are not top-aligned 64K ROMs, so describe their layout with a control-file memory map (`-c`) rather than passing a plain top-aligned binary (see [Usage](#usage)).
+A few parts place their vectors well below the top of a 64K image - `50740A`/`50752` at `0x1FFE` (an 8K space) and `50930`/`37410M3`/`37415M4` at `0x3FFE` (a 16K space).  These are not top-aligned 64K ROMs, so describe their layout with a control-file memory map (`-c`) rather than passing a plain top-aligned binary (see [Usage](#usage)).
 
 ### Adding a device
 
-To add a part, add a `_define(...)` entry to [`m740recon/devices.py`](m740recon/devices.py) — optionally inheriting an existing base — plus any `_alias(...)` lines for sibling part numbers that share its register map.  No other code changes are required: the new name becomes a valid `-m` value automatically.
+To add a part, add a `_define(...)` entry to [`m740recon/devices.py`](m740recon/devices.py) - optionally inheriting an existing base - plus any `_alias(...)` lines for sibling part numbers that share its register map.  No other code changes are required: the new name becomes a valid `-m` value automatically.
 
 ## Testing
 
@@ -182,7 +184,7 @@ $ ./venv/bin/pytest
 
 The suite is self-contained: every input is a synthetic fixture or the repository's own `testprog.asm`, so no external ROM image is required.
 
-The end-to-end reassembly tests use the real [as740](http://shop-pdp.net/ashtml/as740.htm) + aslink to prove the listing assembles bit-for-bit back to the input.  When that toolchain is not found on `PATH` (or as `<tool>.exe` in `~/bin`) those tests **skip** and the rest of the suite still passes — the pure-Python structural round-trip (`test_roundtrip`) keeps re-encoding verified in the meantime.  Set `M740_REQUIRE_AS740=1` to turn a missing toolchain into a hard failure instead (recommended for CI that must never let the reassembly guarantee go unverified).  To run the full check locally, build `as740` and `aslink` from the ASxxxx source and put them on `PATH`.
+The end-to-end reassembly tests use the real [as740](http://shop-pdp.net/ashtml/as740.htm) + aslink to prove the listing assembles bit-for-bit back to the input.  When that toolchain is not found on `PATH` (or as `<tool>.exe` in `~/bin`) those tests **skip** and the rest of the suite still passes - the pure-Python structural round-trip (`test_roundtrip`) keeps re-encoding verified in the meantime.  Set `M740_REQUIRE_AS740=1` to turn a missing toolchain into a hard failure instead (recommended for CI that must never let the reassembly guarantee go unverified).  To run the full check locally, build `as740` and `aslink` from the ASxxxx source and put them on `PATH`.
 
 ## Relationship to m740dasm
 
@@ -206,4 +208,4 @@ The original m740dasm disassembler, on which m740recon is based, was created by 
 
 ## License
 
-m740recon is distributed under the BSD-3-Clause license. The original copyright notice, conditions, and disclaimer — copyright (c) 2018 Mike Naberezny and contributors — are retained in [LICENSE](LICENSE.txt). Additions made in this fork are copyright (c) 2026 Keith Monahan. See [LICENSE](LICENSE.txt) for the full text.
+m740recon is distributed under the BSD-3-Clause license. The original copyright notice, conditions, and disclaimer - copyright (c) 2018 Mike Naberezny and contributors - are retained in [LICENSE](LICENSE.txt). Additions made in this fork are copyright (c) 2026 Keith Monahan. See [LICENSE](LICENSE.txt) for the full text.
