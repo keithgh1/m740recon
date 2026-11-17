@@ -10,6 +10,49 @@ m740recon disassembles firmware for many 8-bit Mitsubishi microcontrollers and g
 
 The underlying disassembler lineage was developed to disassemble the firmware of the [Volkswagen Gamma V](https://github.com/mnaberez/vwradio) and [Volkswagen Rhapsody](https://github.com/mnaberez/vwradio) car radios made by TechniSat. Both radios use the [M38869FFAHP](http://6502.org/documents/datasheets/mitsubishi/renesas_3886_group_users_manual.pdf) microcontroller.
 
+## Quick start
+
+<p align="center"><img src="docs/quickstart.svg" alt="Quick start: optionally bring an AI agent, run m740recon on the ROM, describe the board in a control file, run with the control file, and repeat as lint points out what to fix" width="900"></p>
+
+**Step 1 (optional): bring a helper.**  Point Claude Code or another AI coding agent at this repository and tell it what you have ("disassemble rom.bin, it's an M50734 printer").  [`AGENTS.md`](AGENTS.md) gives it the commands, the working loop and the control-file reference.
+
+**Step 2: run it.**  After [installing](#installation), give it the ROM.  Pick the chip with `-m` if it is not an M3886.
+
+```
+m740recon -m M50734 rom.bin > rom.asm
+```
+
+You get a complete listing that reassembles byte-exact: code and data separated, registers and subroutines named, and the port bits each instruction touches (`reads P3.3-7`).  Add `-a` to follow computed jumps.  If that is all you need, you're done.
+
+**Step 3: describe it.**  To get your own names and the meaning of each signal, write a control file.  The firmware drafts the first version for you:
+
+```
+echo "device M50734" > fw.m740
+m740recon -m M50734 --suggest rom.bin >> fw.m740
+```
+
+Then add what you learn, one line per fact:
+
+| You know... | Write | It usually comes from |
+|---|---|---|
+| which chip it is | [`device`](AGENTS.md#control-file-reference) | the chip marking or datasheet |
+| the ROM is not one block at the top of memory | [`segment`](AGENTS.md#control-file-reference) | the board and the datasheet's memory map |
+| what a pin is wired to | [`pin`](#declaring-signals) | the schematic, or tracing the board |
+| what an SFR bit or RAM flag means | [`bit`](#declaring-signals) | the datasheet, or reading the code |
+| where a gate array or other external chip lives | [`pointer`](#external-registers-and-address-spaces) | the schematic and the firmware |
+| names for routines, addresses and tables | [`label`, `entry`, `comment`, `range`, `addrtable`](AGENTS.md#control-file-reference) | reading the listing |
+
+[`docs/example.m740`](docs/example.m740) is a complete control file with every directive explained.
+
+**Step 4: run with it.**
+
+```
+m740recon -c fw.m740 rom.bin > rom.asm      # listing in your names
+m740recon -c fw.m740 --signals rom.bin      # what touches each signal
+```
+
+Lint findings on stderr mark every place where your file and the firmware disagree; each one is a question to answer, so fix the file and rerun.  `--routine NAME` and `--signal NAME` show one thing at a time.  For a finished real-world example, see [`examples/nx1020/`](examples/nx1020/).
+
 ## Features
 
  - **Identical reassembly.**  The assembly output of m740recon assembles to a bit-for-bit exact copy of the original binary using as740.  A pure-Python structural round-trip verifies the same property without an external assembler.  Every annotation described below is comment text only, so it never affects reassembly.
