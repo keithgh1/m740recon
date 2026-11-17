@@ -227,7 +227,7 @@ EE_CS (P1.0)  out, active high   [source: schematic]  EEPROM chip select
   sub_ff71  0xff71  clear      EE_CS = 0 (not asserted)
 ```
 
-- With no signals declared, `--signals` reports which port bits the firmware touches and their direction instead.  The direction comes from the firmware's own direction-register writes where it makes them, and is otherwise inferred from use and marked `?`.  `--suggest` turns the same bits into `pin` lines to paste in and rename, skipping any already declared:
+- With no signals declared, `--signals` reports which port bits the firmware touches and their direction instead.  The direction comes from the firmware's own direction-register writes where it makes them, and is otherwise inferred from use and marked `?`.  Writing a whole port register does not count as using a pin that is an input, the same rule the analysis applies to a declared input, so every suggested pin is one the lint will find used.  `--suggest` turns the same bits into `pin` lines to paste in and rename, skipping any already declared:
 
 ```
 P0.6   in     36 test, 3 read, 1 write     sub_4cd1, sub_4e69, sub_6b95, reset, sub_8404, ctl_FF, +13 more

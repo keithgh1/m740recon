@@ -100,16 +100,16 @@ def rows(model):
     `direction` is 'out' / 'in' / 'bidir' / None; `certain` is True when it
     comes from direction-register writes rather than from use.  A bit
     touched only by whole-register accesses gets no use-inferred direction:
-    such accesses say nothing about how one pin is wired."""
+    such accesses say nothing about how one pin is wired.  For an input,
+    whole-register writes do not count as touching it, matching how a
+    declared input is analyzed (writing an input's latch has no effect
+    outside the chip)."""
     out = []
     for sig in model.get("signals", []):
         accs = sig["accesses"]
         usage = [a for a in accs if a["kind"] not in _CONFIG]
         if not usage:
             continue
-        counts = {}
-        for a in usage:
-            counts[a["kind"]] = counts.get(a["kind"], 0) + 1
         levels = {a["level"] for a in accs
                   if a["kind"] == "direction" and a["level"] is not None}
         evidence = [a for a in usage if a["scope"] in ("bit", "mask")]
@@ -122,6 +122,14 @@ def rows(model):
             direction = "out" if writes else "in"
         else:
             direction = None
+        if direction == "in":
+            usage = [a for a in usage
+                     if not (a["kind"] == "write" and a["scope"] == "register")]
+            if not usage:
+                continue
+        counts = {}
+        for a in usage:
+            counts[a["kind"]] = counts.get(a["kind"], 0) + 1
         routines = []
         for a in usage:
             r = a["routine"] or "?"

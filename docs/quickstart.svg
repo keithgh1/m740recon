@@ -51,7 +51,7 @@
   <text x="277" y="196" class="b">Full listing with registers,</text>
   <text x="277" y="214" class="b">routines and port bits</text>
   <text x="277" y="232" class="b">named. No setup.</text>
-  <text x="277" y="252" class="s" style="fill:#cf222e">CHIP: yours, e.g. M50734</text>
+  <text x="277" y="252" class="s" style="fill:#cf222e">CHIP = chip name, e.g. M50734</text>
 
   <!-- 3 -->
   <rect x="495" y="92" width="205" height="170" rx="10" fill="#f6f8fa" stroke="#0969da" stroke-width="2"/>
