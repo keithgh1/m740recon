@@ -101,9 +101,9 @@ def rows(model):
     comes from direction-register writes rather than from use.  A bit
     touched only by whole-register accesses gets no use-inferred direction:
     such accesses say nothing about how one pin is wired.  For an input,
-    whole-register writes do not count as touching it, matching how a
-    declared input is analyzed (writing an input's latch has no effect
-    outside the chip)."""
+    whole-register writes and complements do not count as touching it,
+    matching how a declared input is analyzed (changing an input's latch
+    has no effect outside the chip)."""
     out = []
     for sig in model.get("signals", []):
         accs = sig["accesses"]
@@ -124,7 +124,8 @@ def rows(model):
             direction = None
         if direction == "in":
             usage = [a for a in usage
-                     if not (a["kind"] == "write" and a["scope"] == "register")]
+                     if not (a["kind"] in ("write", "toggle")
+                             and a["scope"] == "register")]
             if not usage:
                 continue
         counts = {}

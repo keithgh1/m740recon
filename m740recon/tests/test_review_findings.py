@@ -812,6 +812,18 @@ class SuggestLintAgreementTests(unittest.TestCase):
                 if l.startswith("pin ")]
         self.assertEqual(pins, ["P0.0", "P0.1", "P0.2", "P0.3", "P0.4"])
 
+    def test_input_complemented_only_whole_register_is_not_suggested(self):
+        rom = bytearray(0x40)
+        # ffc0 lda #$0f ; sta P0DIR ; com P0 ; lda P0 ; and #$10 ; rts
+        code = [0xa9, 0x0f, 0x85, 0xf7, 0x44, 0xf6,
+                0xa5, 0xf6, 0x29, 0x10, 0x60]
+        rom[0:len(code)] = bytes(code)
+        rom[0x3e:0x40] = bytes([0xc0, 0xff])
+        _, out, _ = _cli(bytes(rom), None, "--suggest")
+        self.assertNotIn("pin P0.5", out)
+        _, _, err = _cli(bytes(rom), out)
+        self.assertNotIn("never read or written", err)
+
     def test_suggested_board_has_no_unused_findings(self):
         _, out, _ = _cli(self._rom(), None, "--suggest")
         _, _, err = _cli(self._rom(), out)

@@ -16,7 +16,7 @@ The underlying disassembler lineage was developed to disassemble the firmware of
 
 **Step 1 (optional): bring a helper.**  Point Claude Code or another AI coding agent at this repository and tell it what you have ("disassemble rom.bin, it's an M50734 printer").  [`AGENTS.md`](AGENTS.md) gives it the commands, the working loop and the control-file reference.
 
-**Step 2: run it.**  After [installing](#installation), give it the ROM and name your chip with `-m`.  Without `-m` it assumes an M3886, which is probably not what you have; the [supported devices](#supported-devices) are listed below.
+**Step 2: run it.**  After [installing](#installation) and activating the environment, give it the ROM and name your chip with `-m`.  Without `-m` it assumes an M3886, which is probably not what you have; the [supported devices](#supported-devices) are listed below.
 
 ```
 m740recon -m M50734 rom.bin > rom.asm
@@ -94,8 +94,13 @@ $ python3 -m venv ./venv
 $ ./venv/bin/pip3 install --editable '.[test]'
 ```
 
-After running the above, you can run the disassembler with `./venv/bin/m740recon`
-or run its unit tests with `./venv/bin/pytest`.
+After running the above, activate the environment so `m740recon` runs by name, as in the examples below:
+
+```
+$ source venv/bin/activate        # Windows: venv\Scripts\activate
+```
+
+Or run it directly as `./venv/bin/m740recon`, and the unit tests with `./venv/bin/pytest`.
 
 ## Usage
 
