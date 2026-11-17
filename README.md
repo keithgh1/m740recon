@@ -22,7 +22,7 @@ The underlying disassembler lineage was developed to disassemble the firmware of
 
  - **Hardware signals.**  `pin`, `bit` and `group` directives name port pins, bit fields, SFR control bits and RAM flags.  Every instruction that provably touches one is annotated with its meaning (`PE: branch if paper present`), including whole-register stores, read-modify-writes, masked reads, direction-register writes, and calls to small routines with fixed effects.  See [Hardware signals](#hardware-signals).
 
- - **External registers and address spaces.**  `pointer` declares a zero-page pointer to fixed hardware, so indirect accesses through it are attributed to the registers they reach, including registers in a second address space the device selects with an enable bit.
+ - **Gate arrays and other external registers.**  Gate arrays such as the NEC D65006 are supported directly.  `pointer` declares a zero-page pointer to fixed hardware, so indirect accesses through it are attributed to the registers they reach, including registers in a second address space the device selects with an enable bit.
 
  - **Zero-configuration discovery (`--signals`, `--suggest`).**  With no signals declared, m740recon reports which port bits the firmware touches and their direction, and prints `pin` lines to start a board description from.  The listing names the port bits each instruction touches (`and #0x02  reads P0.1`).
 
@@ -144,6 +144,8 @@ In order, these are:
 A load followed by `bbs N,a` is reported as a test of that bit.  Instructions with an indexed operand count when the index register's value is known, and reads of a port's input latch count as reads of its pins.  Long annotations continue on comment-only lines, so every listing line stays within the assembler's input buffer.
 
 ### External registers and address spaces
+
+Gate arrays are supported directly.  740-family MCUs are commonly paired with a custom gate array, such as the NEC D65006 in the Star NX-1020, that adds what the chip lacks: more I/O, a latched host interface, lamp and print-head drivers, and memory banking.  m740recon treats its registers like any other hardware: declare the pointer the firmware reaches them through and what each bit means, and every access is annotated, reported and checked like a port pin.  The support is generic, so any gate array or external chip reached this way works the same.
 
 Hardware outside the chip is often reached through a zero-page pointer.  `pointer` declares one:
 

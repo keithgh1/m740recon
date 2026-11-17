@@ -70,6 +70,30 @@ HP (P0.7)  in, high = carriage at home, low = carriage away   [source: schematic
   ...
 ```
 
+## Gate array
+
+The NX-1020 pairs the M50734 with an NEC D65006 gate array, which holds
+the Centronics host interface, the print-head data latch and the
+front-panel lamps.  Its four registers sit at 0x4000-0x4003 in the DME
+data space, reached only through the pointer at 0xAE.  The board
+description declares that pointer and each register bit, so gate-array
+accesses read like any other signal:
+
+```
+m740recon -c examples/nx1020/nx1020.m740 --signal HOST_BYTE_READY
+```
+
+```
+HOST_BYTE_READY (dme:0x4000.7)  high = host byte waiting   [source: firmware]  IA7: reg0 bit 7
+  get_rx_byte  0x6545  test       HOST_BYTE_READY: branch if host byte waiting
+  sub_7e6d     0x7e87  test       HOST_BYTE_READY: branch if clear
+  ctl_CR       0x94f5  test       HOST_BYTE_READY: branch if host byte waiting
+  ...
+```
+
+`--signal LAMP_ONLINE` shows where the ON LINE lamp is switched, and the
+`host_if` and `lamps` groups collect the rest.
+
 ## Lint findings
 
 With the board description loaded, m740recon reports two findings on
