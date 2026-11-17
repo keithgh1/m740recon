@@ -132,7 +132,7 @@ def assemble(asm_text, org, size):
 
 def disasm_text(rom, device="M3886", start_address=None, entry_points=(),
                 extra_symbols=(), control=None, analyze=False, show_xrefs=False,
-                discover_tables=False):
+                discover_tables=False, annotate=True):
     """Disassemble a raw image and return the as740 listing as text.
 
     Uses the same build path as the CLI (command.build_disassembly).  A
@@ -156,12 +156,20 @@ def disasm_text(rom, device="M3886", start_address=None, entry_points=(),
                                                discover_tables=discover_tables,
                                                **kwargs)
 
+    notes = {}
+    if control is not None and annotate:
+        from m740recon import access
+        smap = command.build_signal_map(control, device)
+        sites = []
+        accs = command.signal_accesses(memory, smap, device, sites)
+        notes = access.listing_annotations(memory, accs, sites)
+
     buf = io.StringIO()
     old = sys.stdout
     sys.stdout = buf
     try:
         Printer(memory, start_address, symtab, comments=comments,
-                show_xrefs=show_xrefs).print_listing()
+                show_xrefs=show_xrefs, annotations=notes).print_listing()
     finally:
         sys.stdout = old
     return buf.getvalue()
@@ -169,13 +177,13 @@ def disasm_text(rom, device="M3886", start_address=None, entry_points=(),
 
 def assert_reassembles(rom, device="M3886", start_address=None,
                        entry_points=(), extra_symbols=(), control=None,
-                       analyze=False, discover_tables=False):
+                       analyze=False, discover_tables=False, annotate=True):
     """Disassemble `rom`, assemble the listing with as740, assert byte-identical."""
     if start_address is None:
         start_address = 0x10000 - len(rom)
     listing = disasm_text(rom, device, start_address, entry_points, extra_symbols,
                           control=control, analyze=analyze,
-                          discover_tables=discover_tables)
+                          discover_tables=discover_tables, annotate=annotate)
     rebuilt = assemble(listing, start_address, len(rom))
     if rebuilt != bytes(rom):
         # find first divergence for a useful message

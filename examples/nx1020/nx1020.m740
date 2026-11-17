@@ -1,0 +1,86 @@
+# Star NX-1020 printer firmware control file for m740recon.
+#
+# Builds the M50734 CPU program-space image (DME off):
+#   0x0000-0x3FFF  RAM            (zero-filled here)
+#   0x4000-0x7FFF  ROM1 system    (ISRs + core routines, from ROM1 file 0x4000)
+#   0x8000-0xFFFF  ROM2 firmware  (v3.2)
+#
+# Paths are relative to this file, so it runs from any directory:
+#   m740recon -c examples/nx1020/nx1020.m740 > nx1020.asm
+#
+# Labels and comments come from the star-nx1020-re reverse-engineering
+# project (https://github.com/keithgh1/star-nx1020-re).
+
+device M50734
+
+# board wiring, RAM flags (signal annotations; comment-only)
+include nx1020_board.m740
+
+segment ram  0x0000 0x4000  zero
+segment sys  0x4000 0x8000  nx1020_rom1.ic7@0x4000
+segment fw   0x8000 0x10000 nx1020_rom2_v3.2.ic6@0x0
+
+# --- landmarks ---
+entry 0x8130 reset
+entry 0x8533 main_loop "fetch host byte; apply char rules; dispatch"
+
+# --- interrupt service routines (resident in ROM1 @ CPU 0x4000-0x7FFF) ---
+entry 0x4965 isr_timer123    "Timer1/2/3: motor micro-stepping pacing"
+entry 0x501a isr_tx_cntr_brk "TX / CNTR / BRK"
+entry 0x5046 isr_he_ve       "HE/VE: carriage column timing"
+entry 0x5057 isr_ri_int1     "RI/INT1: unused sources - error trap (long beep + halt)"
+entry 0x505f isr_int2        "INT2: host /IN-PRIME (Centronics pin 31) reset / re-init"
+entry 0x64b7 get_rx_byte     "fetch next host byte from ring buffer"
+
+# --- EEPROM (BR93C46 on P1: P1.0=CS, P1.1=SK, P1.2=DI, P1.4=DO) ---
+label 0x771d eeprom_read     "16-bit read -> mem_0159/015a"
+label 0x775d eeprom_write    "16-bit write from mem_0159/015a"
+
+# --- font selection ---
+label 0x86e9 draft_font_select "font idx: HS flag (mem_00bc.1) -> 0x0A (HS-Draft group); elite (mem_0062.1) -> +1; NLQ via 0x8764 table"
+
+# --- motor motion / ramp tables ---
+label 0x4230 motion_start    "arm a move: ramp ptr = ramp_ptr_accel[profile mem_0010&0x0F], start Timer2/3 + HE"
+label 0x443b ramp_ptr_accel  "11 words: accel dwell-stream starts per motion profile"
+label 0x4451 ramp_ptr_decel  "11 words: decel dwell-stream starts per motion profile"
+
+# --- ESC EM subcommand paths (dispatch in cmd_esc_EM @0xBCC0) ---
+label 0xbc2f em_font_select  "undoc ESC EM 'F' n: resident font by descriptor index -> mem_0059"
+label 0xbc7f em_size_select  "undoc ESC EM 'S' n: double-height/size via ESC w apply paths"
+label 0xbd0c em_asf_topskip  "ESC EM 'T' n: ASF top-of-page skip = default + (n-6)*72 steps"
+
+# --- bidirectional / logic-seeking ---
+label 0x44a3 direction_decide "pick LTR/RTL for next pass: mode-forced LTR or distance compare"
+label 0x4507 sweep_pos_ltr    "position for L-to-R pass; leaves SMCONH.1 clear; overshoot on wrong-side approach"
+label 0x454e sweep_pos_rtl    "position for R-to-L pass; leaves SMCONH.1 set; mirror of sweep_pos_ltr"
+
+# --- sensors / panel / thermal ---
+label 0xff8f panel_read      "read P3 buttons debounced, AND #0xF8 (P3.3-7 = FONT/PITCH/SET/PF/OL)"
+label 0xd840 home_seek       "carriage home: seek HP flag on P0.7, step budget, edge-align"
+label 0xd990 head_thermal_check "AN3 thermistor: >=0xDA stop, 0xD1-0xD9 interval print, out-of-range = fault"
+
+# --- beeper (= print-head fire) ---
+entry 0x6466 beep_tone       "tone generator: gate-array beeper reg + Timer1"
+entry 0x645c beep_wait_ready
+entry 0x63b7 beep_key        "short key/ack beep"
+entry 0x63ac beep_short
+entry 0x63c2 beep_med
+entry 0x63cd beep_long
+entry 0x63da beep_paper_out  "paper-out alarm: 4 beeps, pause, 4 beeps; panel button aborts (carry set)"
+
+# --- dispatchers ---
+entry 0xc2c0 ctrl_lookup
+entry 0xc0bf esc_dispatch_std
+entry 0xc1bc esc_dispatch_ibm
+
+# --- control-code (C0) dispatch tables: [char, lo, hi], 0x00-terminated ---
+label 0xc063 tbl_ctrl_std
+label 0xc091 tbl_ctrl_ibm
+addrtable 0xc063 stride=3 entryoff=1 terminator=0x00 label=ctl_ names=ascii
+addrtable 0xc091 stride=3 entryoff=1 terminator=0x00 label=ctl_ibm_ names=ascii
+
+# --- ESC command dispatch tables ---
+label 0xc0d4 tbl_esc_std
+label 0xc1d8 tbl_esc_ibm
+addrtable 0xc0d4 stride=3 entryoff=1 terminator=0x00 label=cmd_esc_ names=ascii
+addrtable 0xc1d8 stride=3 entryoff=1 terminator=0x00 label=cmd_esc_ibm_ names=ascii

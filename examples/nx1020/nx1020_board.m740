@@ -1,0 +1,69 @@
+# nx1020_board.m740 -- Star NX-1020 board description for m740recon
+#
+# Pins, SFR control bits and RAM flags, from the star-nx1020-re project's
+# docs/PORT_MAP.md, docs/THEORY_OF_OPERATION.md and docs/ESC_COMMANDS.md.
+# Included by nx1020.m740. Names here are comment-only: they never become
+# assembler symbols, so the listing still reassembles byte-exact.
+
+# --- Port P0 (0xF6): sensors, host reset, head strobe, DME -------------------
+pin P0.0 RELEASE_SW in high="friction position" low="tractor position" source=schematic "/RELEASE release-lever switch"
+pin P0.1 IN_PRIME   in active=low source=schematic "/INT2 = Centronics /IN-PRIME (host reset)"
+pin P0.2 TRACTOR_SW in high="tractor up" low="tractor down" source=schematic "/TRACTOR tractor-position switch"
+pin P0.3 BUSY_PIN   out source=firmware "BUSYout special function disabled; static HIGH, never touched"
+pin P0.4 HEAD_STB   out active=low source=datasheet "print-head energize strobe (STBOUT)"
+pin P0.5 DME        out source=datasheet "data-memory enable (special function)"
+pin P0.6 PE         in high="paper end" low="paper present" source=firmware "paper-end sensor"
+pin P0.7 HP         in high="carriage at home" low="carriage away" source=schematic "home-position photo-interrupter"
+
+# --- Port P1 (0xF3): BR93C46 serial EEPROM, bit-banged ----------------------
+pin P1.0 EE_CS out active=high source=schematic "EEPROM chip select"
+pin P1.1 EE_SK out source=schematic "EEPROM serial clock"
+pin P1.2 EE_DI out source=schematic "EEPROM data in"
+pin P1.3 EE_ORG in source=schematic "EEPROM pin 6 (NC/ORG), inert"
+pin P1.4 EE_DO in source=schematic "EEPROM data out"
+group eeprom EE_CS EE_SK EE_DI EE_ORG EE_DO "BR93C46 serial EEPROM (IC9)"
+
+# --- Port P2 (0xF0): stepper phases ------------------------------------------
+pin P2.0-3 P2L_PHASE out source=datasheet "four-phase stepper output channel P2L"
+pin P2.4-7 P2H_PHASE out source=datasheet "four-phase stepper output channel P2H"
+
+# --- Port P3 (0xEE): motor voltage selects + control panel ------------------
+pin P3.0 CR_CMN_HV out high="+25 V drive" low="+5 V hold" source=schematic "carriage motor commons voltage select"
+pin P3.1 LF_CMN_HV out high="+25 V drive" low="+5 V hold" source=schematic "line-feed motor commons voltage select"
+pin P3.3 BTN_FONT  in active=low source=schematic "/FONT button"
+pin P3.4 BTN_PITCH in active=low source=schematic "/PITCH button"
+pin P3.5 BTN_SET   in active=low source=schematic "/SET button"
+pin P3.6 BTN_PF    in active=low source=schematic "/PF paper-feed button"
+pin P3.7 BTN_OL    in active=low source=schematic "/OL on-line button"
+group panel BTN_FONT BTN_PITCH BTN_SET BTN_PF BTN_OL "control panel buttons"
+
+# --- SFR control bits --------------------------------------------------------
+bit P0FUNC.5 DME_FUNC source=datasheet "P0.5 special function: DME on"
+bit ICON1.2  INT2_EN  source=datasheet "/INT2 (IN-PRIME) interrupt enable"
+bit ICON1.3  INT2_REQ source=datasheet "/INT2 interrupt request"
+
+# --- RAM flags ---------------------------------------------------------------
+bit 0x52.7 asf_installed source=firmware "ASF installed (EDS A-4)"
+bit 0x52.6 asf_selected  source=firmware "ASF selected (ESC EM 0/4)"
+bit 0x56.5 pe_detect_off source=firmware "paper-out detector disabled"
+bit 0x5b.6 unidirectional source=firmware "ESC U: unidirectional printing"
+bit 0x62.1 elite_pitch   source=firmware "elite pitch selected"
+
+# --- Gate array: 0x4000-0x4003 in the DME data space -----------------------
+# Reached only through the zero-page pointer mem_00ae:af with [zp],y while
+# DME is on (P0FUNC.5). Register meanings from docs/PORT_MAP.md.
+pointer 0xae 0x4000 space=dme "gate array base (mem_00ae:af)"
+
+bit 0x4000.7   HOST_BYTE_READY space=dme access=read  high="host byte waiting" source=firmware "IA7: reg0 bit 7"
+bit 0x4000.0-7 HEAD_DATA       space=dme access=write source=firmware "reg0: print-head data"
+bit 0x4001.0-7 HOST_DATA       space=dme access=read  source=firmware "reg1: latched host data byte"
+bit 0x4002.0 HOST_IF_EN  space=dme access=write source=firmware "reg2: host interface enable"
+bit 0x4002.2 HOST_ACK    space=dme access=write source=firmware "reg2: /ACK pulse, clears IA7"
+bit 0x4002.3 HOST_FAULT  space=dme access=write source=firmware "reg2: fault / off line to host"
+bit 0x4002.4 HOST_SELECT space=dme access=write source=firmware "reg2: SELECT (Centronics pin 13)"
+bit 0x4002.5 HOST_PE     space=dme access=write source=firmware "reg2: paper empty (Centronics pin 12)"
+bit 0x4003.0 LAMP_POWER  space=dme access=write source=firmware "reg3: POWER lamp"
+bit 0x4003.1 LAMP_ONLINE space=dme access=write source=firmware "reg3: ON LINE lamp"
+bit 0x4003.2 LAMP_QUIET  space=dme access=write source=firmware "reg3: QUIET lamp"
+group host_if HOST_BYTE_READY HOST_DATA HOST_IF_EN HOST_ACK HOST_FAULT HOST_SELECT HOST_PE "Centronics host interface (gate array)"
+group lamps LAMP_POWER LAMP_ONLINE LAMP_QUIET "front-panel lamps (gate array reg3)"

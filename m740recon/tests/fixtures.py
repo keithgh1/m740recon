@@ -155,3 +155,48 @@ def computed_jump_image():
     img[0x9000:0x9003] = bytes([0xA9, 0x42, 0x60])      # lda #0x42 ; rts
     _set_reset(img, 0x8000)
     return bytes(img)
+
+
+def signals_image():
+    """A small top-loaded M50734 ROM (0xffc0-0xffff) whose code exercises
+    every bit-instruction form on declared port pins, a multi-bit field, RAM
+    flags, an undeclared bit, and the accumulator bit forms (which Phase 1
+    leaves unannotated).  Driven by SIGNALS_CONTROL."""
+    size = 0x40
+    base = 0x10000 - size                       # loads at 0xffc0
+
+    def put(addr, data):
+        img[addr - base:addr - base + len(data)] = bytes(data)
+
+    img = bytearray(size)
+    put(0xffc0, [
+        0x0F, 0xF3,         # ffc0 seb 0,P1        EE_CS = 1
+        0x1F, 0xF3,         # ffc2 clb 0,P1        EE_CS = 0
+        0xD7, 0xF6, 0x03,   # ffc4 bbc 6,P0,+3     PE test (paper present)
+        0xC7, 0xF6, 0x00,   # ffc7 bbs 6,P0,+0     PE test (paper end)
+        0x8F, 0xF6,         # ffca seb 4,P0        STB (active low)
+        0x9F, 0xF6,         # ffcc clb 4,P0
+        0x4F, 0xF0,         # ffce seb 2,P2        CR_PHASE[2]
+        0xE7, 0x52, 0x00,   # ffd0 bbs 7,0x52,+0   asf_installed
+        0xAF, 0x56,         # ffd3 seb 5,0x56      pe_detect_off (guess)
+        0x6F, 0x60,         # ffd5 seb 3,0x60      undeclared RAM bit
+        0x23, 0x00,         # ffd7 bbs 1,a,+0      accumulator form
+        0x2B,               # ffd9 seb 1,a
+        0x60,               # ffda rts
+    ])
+    put(0xfffe, [0xC0, 0xFF])                   # reset vector -> 0xffc0
+    return bytes(img)
+
+
+SIGNALS_CONTROL = (
+    "device M50734\n"
+    "label 0xffc0 reset\n"
+    'pin P0.6 PE in high="paper end" low="paper present" source=firmware\n'
+    'pin P0.4 STB out active=low "print-head strobe"\n'
+    "pin P1.0 EE_CS out active=high\n"
+    "pin P1.1 EE_SK out\n"
+    'pin P2.0-3 CR_PHASE out "carriage stepper phases"\n'
+    "bit 0x52.7 asf_installed\n"
+    'bit 0x56.5 pe_detect_off source=guess "paper-out detector disabled"\n'
+    'group eeprom EE_CS EE_SK "serial EEPROM"\n'
+)

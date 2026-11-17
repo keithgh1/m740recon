@@ -16,3 +16,7 @@ htmlcov/
 coverage.xml
 nosetests.xml
 out.*
+
+# NX-1020 ROM images, fetched by m740recon/tests/nx1020_roms.py
+examples/nx1020/*.ic6
+examples/nx1020/*.ic7

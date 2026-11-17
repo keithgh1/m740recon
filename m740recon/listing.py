@@ -1,13 +1,57 @@
 import struct
 
+# Longest listing line produced for annotations.  ASxxxx reads source lines
+# into a fixed buffer (380 bytes in the builds tested); a longer line is
+# split, and the remainder is assembled as a new line.
+MAX_LINE = 120
+_CONTINUATION = ' ' * 40 + ';  '
+
+
+def _wrap(text, first_width, width):
+    """Split annotation `text` into a first piece of at most `first_width`
+    characters and continuation pieces of at most `width`.  Breaks prefer the
+    '; ' between separate facts, then spaces; an unbroken run longer than
+    `width` is cut."""
+    facts = text.split('; ')
+    units = []                 # (text, glue before it)
+    for i, fact in enumerate(facts):
+        tail = ';' if i < len(facts) - 1 else ''
+        if len(fact) + len(tail) <= width:
+            units.append((fact + tail, ' '))          # keep a fact whole
+        else:
+            for j, word in enumerate((fact + tail).split(' ')):
+                units.append((word, ' '))
+    pieces = []
+    current = ''
+    limit = max(first_width, 0)
+    for unit, glue in units:
+        while True:
+            candidate = unit if not current else current + glue + unit
+            if len(candidate) <= limit:
+                current = candidate
+                break
+            if current:                               # start a new line
+                pieces.append(current)
+                current = ''
+                limit = width
+            elif limit < width:                       # no room on line 1
+                pieces.append('')
+                limit = width
+            else:                                     # unbreakable run
+                pieces.append(unit[:limit])
+                unit = unit[limit:]
+    pieces.append(current)
+    return pieces[0], [p for p in pieces[1:] if p]
+
 class Printer(object):
     def __init__(self, memory, start_address, symbol_table, comments=None,
-                 show_xrefs=False):
+                 show_xrefs=False, annotations=None):
         self.memory = memory
         self.start_address = start_address
         self.symbol_table = symbol_table
         self.comments = comments or {}        # addr -> user comment text
         self.show_xrefs = show_xrefs
+        self.annotations = annotations or {}  # instruction addr -> trailing text
         self.xrefs = {}                       # addr -> set of referencing addresses
         self.last_line_type = None
 
@@ -16,9 +60,18 @@ class Printer(object):
             self.xrefs = self._compute_xrefs()
         self.print_header()
         self.print_symbols()
+        self._print_body(self.start_address, len(self.memory))
 
-        address = self.start_address
-        while address < len(self.memory):
+    def print_region(self, start, end):
+        """Print the listing body for [start, end) only: no header and no
+        equates, so the output is for reading, not for reassembly."""
+        if self.show_xrefs:
+            self.xrefs = self._compute_xrefs()
+        self.last_line_type = None
+        self._print_body(start, min(end, len(self.memory)))
+
+    def _print_body(self, address, end):
+        while address < end:
             self.print_blank(address)
             self.print_comment(address)
             self.print_label(address)
@@ -215,7 +268,17 @@ class Printer(object):
         if inst.illegal:
             line += "Illegal instruction"
 
-        print(line)
+        note = self.annotations.get(address)
+        if not note:
+            print(line)
+            return
+        # Keep every line well inside the assembler's input buffer: put what
+        # fits after the instruction and continue on comment-only lines.
+        first, rest = _wrap(note, MAX_LINE - len(line) - 1,
+                            MAX_LINE - len(_CONTINUATION))
+        print(line + ' ' + first if first else line)
+        for chunk in rest:
+            print(_CONTINUATION + chunk)
 
     def format_abs_address(self, address):
         if address in self.symbol_table:
