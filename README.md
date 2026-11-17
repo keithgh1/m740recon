@@ -10,6 +10,51 @@ m740recon disassembles firmware for many 8-bit Mitsubishi microcontrollers and g
 
 The underlying disassembler lineage was developed to disassemble the firmware of the [Volkswagen Gamma V](https://github.com/mnaberez/vwradio) and [Volkswagen Rhapsody](https://github.com/mnaberez/vwradio) car radios made by TechniSat. Both radios use the [M38869FFAHP](http://6502.org/documents/datasheets/mitsubishi/renesas_3886_group_users_manual.pdf) microcontroller.
 
+## Quick start
+
+<p align="center"><img src="docs/quickstart.svg" alt="Quick start: optionally bring an AI agent, run m740recon on the ROM, describe the board in a control file, run with the control file, and repeat as lint points out what to fix" width="900"></p>
+
+**Step 1 (optional): bring a helper.**  Point Claude Code or another AI coding agent at this repository and tell it what you have ("disassemble rom.bin, it's an M50734 printer").  [`AGENTS.md`](AGENTS.md) gives it the commands, the working loop and the control-file reference.
+
+**Step 2: run it.**  After [installing](#installation) and activating the environment, give it the ROM and name your chip with `-m`.  Without `-m` it assumes an M3886, which is probably not what you have; the [supported devices](#supported-devices) are listed below.
+
+```
+m740recon -m M50734 rom.bin > rom.asm
+```
+
+You get a complete listing that reassembles byte-exact: code and data separated, registers and subroutines named, and the port bits each instruction touches (`reads P3.3-7`).  Add `-a` to follow computed jumps.  If that is all you need, you're done.
+
+**Step 3: describe it.**  To get your own names and the meaning of each signal, write a control file.  The firmware drafts the first version for you:
+
+```
+echo "device M50734" > fw.m740
+m740recon -m M50734 --suggest rom.bin >> fw.m740
+```
+
+Then add what you learn, one line per fact:
+
+| You know... | Write | It usually comes from |
+|---|---|---|
+| which chip it is | [`device`](AGENTS.md#control-file-reference) | the chip marking or datasheet |
+| the ROM is not one block at the top of memory | [`segment`](AGENTS.md#control-file-reference) | the board and the datasheet's memory map |
+| what a pin is wired to | [`pin`](#declaring-signals) | the schematic, or tracing the board |
+| what an SFR bit or RAM flag means | [`bit`](#declaring-signals) | the datasheet, or reading the code |
+| where a gate array or other external chip lives | [`pointer`](#external-registers-and-address-spaces) | the schematic and the firmware |
+| names for routines, addresses and tables | [`label`, `entry`, `comment`, `range`, `addrtable`](AGENTS.md#control-file-reference) | reading the listing |
+
+[`docs/example.m740`](docs/example.m740) is a complete control file with every directive explained.
+
+**Step 4: run with it.**
+
+```
+m740recon -c fw.m740 rom.bin > rom.asm      # listing in your names
+m740recon -c fw.m740 --signals rom.bin      # what touches each signal
+```
+
+Lint findings on stderr mark every place where your file and the firmware disagree; each one is a question to answer, so fix the file and rerun.  `--routine NAME` and `--signal NAME` show one thing at a time.
+
+**Going further.**  [Reports and visualization](#reports-and-visualization) shows the call graph, one-routine views, the JSON model and call-graph diagrams, with real output.  [Hardware signals](#hardware-signals) covers everything a control file can describe.  [`examples/nx1020/`](examples/nx1020/) is a finished real-world project to copy from.
+
 ## Features
 
  - **Identical reassembly.**  The assembly output of m740recon assembles to a bit-for-bit exact copy of the original binary using as740.  A pure-Python structural round-trip verifies the same property without an external assembler.  Every annotation described below is comment text only, so it never affects reassembly.
@@ -49,8 +94,13 @@ $ python3 -m venv ./venv
 $ ./venv/bin/pip3 install --editable '.[test]'
 ```
 
-After running the above, you can run the disassembler with `./venv/bin/m740recon`
-or run its unit tests with `./venv/bin/pytest`.
+After running the above, activate the environment so `m740recon` runs by name, as in the examples below:
+
+```
+$ source venv/bin/activate        # Windows: venv\Scripts\activate
+```
+
+Or run it directly as `./venv/bin/m740recon`, and the unit tests with `./venv/bin/pytest`.
 
 ## Usage
 
@@ -184,7 +234,7 @@ EE_CS (P1.0)  out, active high   [source: schematic]  EEPROM chip select
   sub_ff71  0xff71  clear      EE_CS = 0 (not asserted)
 ```
 
-- With no signals declared, `--signals` reports which port bits the firmware touches and their direction instead.  The direction comes from the firmware's own direction-register writes where it makes them, and is otherwise inferred from use and marked `?`.  `--suggest` turns the same bits into `pin` lines to paste in and rename, skipping any already declared:
+- With no signals declared, `--signals` reports which port bits the firmware touches and their direction instead.  The direction comes from the firmware's own direction-register writes where it makes them, and is otherwise inferred from use and marked `?`.  Writing a whole port register does not count as using a pin that is an input, the same rule the analysis applies to a declared input, so every suggested pin is one the lint will find used.  `--suggest` turns the same bits into `pin` lines to paste in and rename, skipping any already declared:
 
 ```
 P0.6   in     36 test, 3 read, 1 write     sub_4cd1, sub_4e69, sub_6b95, reset, sub_8404, ctl_FF, +13 more
@@ -234,7 +284,34 @@ $ ./venv/bin/m740recon -c firmware.m740 --signals    > signals.txt     # hardwar
 $ ./venv/bin/m740recon -c firmware.m740 --routine main_loop            # one routine
 ```
 
+None of them needs a control file: `m740recon -m M50734 -g rom.bin` works on a bare ROM.  With a control file the reports use your names and include the signals.
+
 `--call-graph` lists each routine with the routines it calls and the routines that call it, and, when signals are declared, the signals it touches.  `--json` writes a structured model (`m740recon-report/1`): routines (each with its outgoing/incoming call edges), vectors, symbols, and a full cross-reference map, plus signal, group, pointer and lint sections when the control file declares them; [`docs/json_model.md`](docs/json_model.md) describes every key.  `--routine` prints the code reachable from a routine's entry without entering other routines, and names the routines it continues into.
+
+Here is one routine from the NX-1020's call graph, the carriage home seek: the routines it calls (with the call site), the routines that call it, and the signal it touches:
+
+```
+home_seek [subroutine]
+    -> sub_4595               ; @0xd853
+    -> sub_d94b               ; @0xd865
+    ...
+    -> sub_483f               ; @0xd92f
+    -> sub_481d               ; @0xd934
+    <- reset, sub_d32c
+    signals: HP(test)
+```
+
+And `--routine panel_read` prints just the front-panel button reader instead of the whole 50,000-line listing:
+
+```
+panel_read:
+    lda P3                  ;ff8f  a5 ee
+    ldm #0xff,WDT           ;ff91  3c ff fc
+    cmp P3                  ;ff94  c5 ee     reads CR_CMN_HV, LF_CMN_HV, BTN_FONT, BTN_PITCH, BTN_SET, BTN_PF, BTN_OL
+    bne panel_read          ;ff96  d0 f7
+    and #0xf8               ;ff98  29 f8     reads BTN_FONT, BTN_PITCH, BTN_SET, BTN_PF, BTN_OL
+    rts                     ;ff9a  60
+```
 
 The JSON model renders into a [Graphviz](https://graphviz.org/) diagram.  A full firmware graph is usually too large to read, so filter to a routine of interest - for example, everything reachable from one routine, two levels deep:
 
