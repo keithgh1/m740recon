@@ -17,6 +17,20 @@ Options:
                        edges, vectors, symbols, xrefs) instead of the listing
   -g, --call-graph     emit a human-readable call-graph report instead of the
                        listing
+  -s, --signals        emit a report of every declared pin/bit signal and the
+                       instructions that access it, instead of the listing
+                       With no signals declared, reports which port bits the
+                       firmware touches and infers their direction instead
+      --suggest        print control-file pin lines for every port bit the
+                       firmware touches, as a starting point
+      --signal NAME    print the --signals report for one signal only
+      --routine R      print the code of one routine only: everything
+                       reachable from its entry without entering another
+                       routine (R is a routine name or a hex address such
+                       as 0x8130); for reading, not for reassembly
+      --no-annotate    do not add hardware-signal comments to the listing
+                       (they are added only when the control file defines
+                       pin/bit signals)
   -h, --help           show this help
 
 '''
@@ -70,6 +84,73 @@ def build_disassembly(rom, device, start_address, entry_points=(),
     return memory, symbol_table
 
 
+def build_signal_map(cf, device):
+    """Resolve the control file's pin/bit/group declarations for `device`.
+    Returns an empty SignalMap when none are declared."""
+    from m740recon import signals
+    if cf is None or not (cf.signals or cf.pointers):
+        if cf is not None and cf.groups:
+            raise control.ControlError(
+                "%s: group declared but no pin/bit signals" % cf.groups[0].where)
+        return signals.SignalMap()
+    syms = list(Devices[device]["symbol_table"]) + list(cf.symbols)
+    return signals.build(cf.signals, cf.groups, syms, cf.pointers)
+
+
+def signal_accesses(memory, smap, device=None, pointer_sites=None):
+    from m740recon import access
+    dev = Devices[device] if device else {}
+    return access.classify(memory, smap, dev.get("ports"), dev.get("spaces"),
+                           pointer_sites)
+
+
+def signal_lint(memory, smap, accesses, device):
+    """Lint findings [(rule, text)] for the declared signals; empty when
+    none are declared."""
+    if not smap:
+        return []
+    from m740recon import discover, lint
+    raw = discover.raw_signal_map(device)
+    return lint.check(smap, accesses, signal_accesses(memory, raw, device))
+
+
+def routine_blocks(memory, start, roots):
+    """The code of the routine entered at `start`: every instruction
+    reachable from it by fallthrough and static branches, without entering
+    other routines (`roots`, the entries of all routines) or following
+    calls.  Returns ([(start, end) of each contiguous run], {entries of
+    other routines it jumps or falls into})."""
+    from m740recon.tables import FlowTypes
+    seen = set()
+    exits = set()
+    todo = [start]
+    while todo:
+        addr = todo.pop()
+        if addr in seen or not memory.is_instruction_start(addr):
+            continue
+        if addr != start and addr in roots:
+            exits.add(addr)
+            continue
+        seen.add(addr)
+        inst = memory.get_instruction(addr)
+        flow = inst.flow_type
+        if flow in (FlowTypes.Continue, FlowTypes.ConditionalJump,
+                    FlowTypes.SubroutineCall, FlowTypes.IndirectSubroutineCall):
+            todo.append((addr + len(inst)) & 0xFFFF)
+        if flow in (FlowTypes.ConditionalJump, FlowTypes.UnconditionalJump):
+            target = inst.code_ref_address
+            if target is not None:
+                todo.append(target)
+    runs = []
+    for addr in sorted(seen):
+        end = addr + len(memory.get_instruction(addr))
+        if runs and runs[-1][1] == addr:
+            runs[-1] = (runs[-1][0], end)
+        else:
+            runs.append((addr, end))
+    return runs, exits
+
+
 def control_comments(cf):
     """Map addresses to user comment text (from `comment` and label comments)."""
     comments = dict(cf.comments)
@@ -119,9 +200,11 @@ def control_args(cf, rom):
 def main():
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "hm:c:axjg",
+        opts, args = getopt.getopt(sys.argv[1:], "hm:c:axjgs",
                                    ["help", "mcutype=", "control=", "analyze",
-                                    "xref", "auto-tables", "json", "call-graph"])
+                                    "xref", "auto-tables", "json", "call-graph",
+                                    "no-annotate", "signals", "suggest",
+                                    "signal=", "routine="])
     except getopt.GetoptError:
         sys.stderr.write(__doc__)
         sys.exit(1)
@@ -135,6 +218,11 @@ def main():
     discover_tables = False
     json_report     = False
     callgraph_report = False
+    annotate        = True
+    signals_report  = False
+    suggest         = False
+    one_signal      = None
+    one_routine     = None
 
     for opt, val in opts:
         if opt in ("-h", "--help"):
@@ -159,8 +247,28 @@ def main():
             json_report = True
         elif opt in ("-g", "--call-graph"):
             callgraph_report = True
+        elif opt in ("-s", "--signals"):
+            signals_report = True
+        elif opt == "--suggest":
+            suggest = True
+        elif opt == "--signal":
+            one_signal = val
+        elif opt == "--routine":
+            one_routine = val
+        elif opt == "--no-annotate":
+            annotate = False
         else:
             sys.stderr.write(__doc__)
+            sys.exit(1)
+
+    if one_routine is not None:
+        others = [name for name, on in (
+            ("-j", json_report), ("-g", callgraph_report),
+            ("--signals", signals_report), ("--signal", one_signal is not None),
+            ("--suggest", suggest)) if on]
+        if others:
+            sys.stderr.write("--routine cannot be combined with %s\n"
+                             % ", ".join(others))
             sys.exit(1)
 
     # An optional control file supplies entry points, labels, a memory map,
@@ -206,23 +314,108 @@ def main():
                                              discover_tables=discover_tables,
                                              **kwargs)
 
-    if json_report or callgraph_report:
+    try:
+        smap = build_signal_map(cf, selected_device)
+    except control.ControlError as e:
+        sys.stderr.write("Control file error: %s\n" % e)
+        sys.exit(2)
+    pointer_sites = []
+    accesses = signal_accesses(memory, smap, selected_device, pointer_sites)
+    findings = signal_lint(memory, smap, accesses, selected_device)
+    for rule, text in findings:
+        sys.stderr.write("m740recon: lint: %s\n" % text)
+
+    if suggest or (signals_report and not smap):
+        from m740recon import discover, report
+        raw = discover.raw_signal_map(selected_device)
+        model = report.build_model(memory, symbol_table, start_address,
+                                   len(rom), selected_device, signal_map=raw,
+                                   accesses=signal_accesses(
+                                       memory, raw, selected_device))
+        if suggest:
+            sys.stdout.write(discover.format_suggest(model, selected_device,
+                                                     declared=smap))
+        else:
+            sys.stdout.write(discover.format_discovery(model, selected_device))
+        return
+
+    if one_signal is not None:
         from m740recon import report
         model = report.build_model(memory, symbol_table, start_address,
-                                   len(rom), selected_device)
+                                   len(rom), selected_device,
+                                   signal_map=smap, accesses=accesses)
+        model["lint"] = [{"rule": r, "text": t} for r, t in findings]
+        text = report.format_signal(model, one_signal) if smap else None
+        if text is None:
+            names = ", ".join(s.name for s in smap.signals) or "(none declared)"
+            sys.stderr.write("Unknown signal %r; declared: %s\n"
+                             % (one_signal, names))
+            sys.exit(2)
+        sys.stdout.write(text)
+        return
+
+    if json_report or callgraph_report or signals_report:
+        from m740recon import report
+        model = report.build_model(memory, symbol_table, start_address,
+                                   len(rom), selected_device,
+                                   signal_map=smap, accesses=accesses,
+                                   pointer_sites=pointer_sites)
+        if smap:
+            model["lint"] = [{"rule": r, "text": t} for r, t in findings]
         if json_report:
             sys.stdout.write(report.to_json(model))
-        else:
+        elif callgraph_report:
             sys.stdout.write(report.format_call_graph(model))
+        else:
+            sys.stdout.write(report.format_signals(model))
         return
 
     comments = control_comments(cf) if cf is not None else {}
+    notes = {}
+    if annotate and smap.active:
+        from m740recon import access
+        notes = access.listing_annotations(memory, accesses, pointer_sites)
+    elif annotate:
+        # no signals declared: name the port bits touched
+        from m740recon import access, discover
+        bits = discover.port_bit_map(selected_device)
+        notes = {site: discover.compact_bits(text) for site, text in
+                 access.listing_annotations(
+                     memory, signal_accesses(memory, bits, selected_device),
+                     []).items()}
     printer = Printer(memory,
                       start_address,
                       symbol_table,
                       comments=comments,
                       show_xrefs=show_xrefs,
+                      annotations=notes,
                       )
+    if one_routine is not None:
+        from m740recon import report
+        model = report.build_model(memory, symbol_table, start_address,
+                                   len(rom), selected_device)
+        key = one_routine
+        try:
+            key = int(one_routine, 16) if one_routine.lower().startswith(
+                "0x") else one_routine
+        except ValueError:
+            pass
+        span = report.find_routine(model, key)
+        if span is None:
+            sys.stderr.write("Unknown routine %r (give a routine name or the "
+                             "hex address of a routine entry)\n" % one_routine)
+            sys.exit(2)
+        start = span[0]
+        roots = {int(r["address"], 16) for r in model["routines"]}
+        runs, exits = routine_blocks(memory, start, roots)
+        for i, (lo, hi) in enumerate(runs):
+            if i:
+                print("    ; ...")
+            printer.print_region(lo, hi)
+        if exits:
+            print("    ; continues into: %s" % ", ".join(
+                printer.format_abs_address(a) for a in sorted(exits)))
+        return
     printer.print_listing()
 
 

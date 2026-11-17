@@ -41,6 +41,8 @@ jobs:
 
     - name: Run the tests
       run: pytest
+      env:
+        M740RECON_REQUIRE_NX1020: "1"
 
     - name: Disassemble and reassemble the test program
       run: |

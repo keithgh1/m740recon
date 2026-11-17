@@ -1,0 +1,2 @@
+unused: EE_ORG (P1.3): never read or written by the firmware
+direction: CR_CMN_HV (P3.0): declared out, but the firmware makes it an input at 0x43b9, 0x4a8c

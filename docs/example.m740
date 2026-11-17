@@ -82,12 +82,51 @@ entry 0x9c80 cdc_parse    "CD-changer message parser; reached via tbl_handlers"
 
 # --- Comments (free-text notes pinned to an address) ------------------------
 # `comment ADDR "text"` attaches a note to any address; it prints as a ';' line
-# directly above that location every time the listing reaches it.  This is the
-# place for board-specific wiring and hardware behaviour the SFR name alone does
-# not convey.  (A quoted comment on `label`/`entry` renders the same way.)
-comment 0x0004 "Port P2: P2.0-3 -> tuner PLL (I2C); P2.4 -> audio mute relay; P2.7 -> dial lamp"
+# directly above that location every time the listing reaches it.  Use it for
+# notes the SFR name alone does not convey.  (A quoted comment on `label`/`entry`
+# renders the same way.)  For what is wired to each port pin, prefer the `pin`
+# directive below: it annotates every instruction that touches the pin.
 comment 0x001e "WDTCON: the 1 ms tick writes here to kick the watchdog"
 comment 0x8533 "dispatch: host_cmd -> tbl_handlers index; unknown commands are ignored"
+
+
+# --- Signals: what is wired to the pins, and named flag bits -----------------
+# `pin LOC NAME [in|out|bidir] [active=high|low] [high=TEXT] [low=TEXT]
+#      [source=schematic|firmware|datasheet|guess] ["description"]`
+# names a port bit (P2.4) or a bit range (P2.0-3).  LOC is ADDR.BIT where ADDR
+# is an SFR name from the device, a `label`, or a number.  Once a signal is
+# declared, every seb/clb/bbs/bbc on it gets a trailing comment, e.g.
+#     seb 4,P2        ;8a12  8f 04     MUTE = 1 (muted)
+#     bbc 7,P2,...    ;8a20  f7 04 06  DIAL_LAMP?: branch if not asserted
+# high=/low= say what each level means; active= says which level is "on".
+# source= records where the fact came from; a guess prints as "NAME?".
+# Signal names are comment-only: they never become assembler symbols, so the
+# listing still reassembles byte-exact.  --no-annotate turns the comments off.
+pin P2.0-3 PLL_BUS   bidir source=schematic "tuner PLL (I2C)"
+pin P2.4   MUTE      out high="muted" low="audio on" source=schematic "audio mute relay"
+pin P2.7   DIAL_LAMP out active=high source=guess "dial lamp"
+
+# `bit LOC NAME [high=TEXT] [low=TEXT] [source=...] ["description"]` names any
+# other bit: an SFR control bit or a RAM flag.  It has no direction.
+bit 0x0040.7 vol_muted "set while the fader is held at zero"
+
+# `group NAME SIGNAL... ["description"]` collects related signals for reports.
+group audio MUTE vol_muted "audio path"
+
+# Hardware outside the chip, reached through a pointer.  `pointer ADDR TARGET`
+# says the zero-page pair at ADDR (lo, hi) holds the fixed address TARGET, so
+# every lda/sta [ADDR],y with a known Y is attributed to TARGET+Y.  A bit there
+# can be limited to reads or writes: here the display controller's register 0
+# reads back a busy flag but takes command bytes when written.
+# (`space=NAME` would place them in a second address space reached only
+# through pointers; this M3886 board has none.)
+pointer 0x0060 0x6000 "LCD controller base, set once at reset"
+bit 0x6000.7   LCD_BUSY high="busy" access=read
+bit 0x6000.0-7 LCD_CMD  access=write "command register"
+
+# A board description shared by several firmware revisions can live in its own
+# file and be pulled in with `include board.m740` (resolved relative to this
+# file; includes may nest).
 
 
 # --- Typed data ranges ------------------------------------------------------
