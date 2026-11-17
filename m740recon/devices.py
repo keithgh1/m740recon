@@ -7,16 +7,35 @@ _finalize() resolves every public device into the flat Devices mapping
 (vector_table / symbol_table / unsupported_opcodes) the rest of the tool
 uses.  A device may declare unsupported_opcodes (opcodes its core lacks),
 which the decoder renders as data; the default empty set changes nothing.
+
+A device may also declare `ports`: for each I/O port, the addresses of its
+data, direction, function and input-latch registers and the direction-bit
+value that means "output".  It is optional, not inherited, and only the
+signal features read it; devices without it simply skip port-mode decoding
+and lint.
+
+A device may also declare `spaces`: second address spaces reachable through
+pointers, each with the bit that enables it, as (register, bit, value), and
+the addressing modes that reach it.  Pointer accesses into a space are then
+attributed to it only while the enable bit is provably set.
 """
 
 from m740recon.symbols import Symbol
+from m740recon.tables import AddressModes
 
 Devices = {}
 _DEFS = {}
 
 
+def _port(data, direction=None, function=None, input=None, output=1):
+    """Port metadata: register addresses (None when absent) and the
+    direction-register bit value meaning output."""
+    return {"data": data, "direction": direction, "function": function,
+            "input": input, "output": output}
+
+
 def _define(name, parent=None, vector_table=None, symbols=(),
-            unsupported_opcodes=(), public=True):
+            unsupported_opcodes=(), public=True, ports=None, spaces=None):
     if name in _DEFS:
         raise ValueError("device %r is already defined" % name)
     if parent is not None:
@@ -34,7 +53,8 @@ def _define(name, parent=None, vector_table=None, symbols=(),
         by_addr[sym.address] = sym
     unsupported.update(unsupported_opcodes)
     _DEFS[name] = {"vectors": vectors, "by_addr": by_addr,
-                   "unsupported": frozenset(unsupported), "public": public}
+                   "unsupported": frozenset(unsupported), "public": public,
+                   "ports": ports, "spaces": spaces}
 
 
 def _finalize():
@@ -46,6 +66,10 @@ def _finalize():
             "symbol_table": [d["by_addr"][a] for a in sorted(d["by_addr"])],
             "unsupported_opcodes": d["unsupported"],
         }
+        if d["ports"]:
+            Devices[name]["ports"] = dict(d["ports"])
+        if d["spaces"]:
+            Devices[name]["spaces"] = dict(d["spaces"])
 
 
 _define("7450",
@@ -283,6 +307,10 @@ _define("M3807", parent="_m3800",
 )
 
 _define("M3886", parent="_m3800",
+    # 3886 group: port Pn data at 2n, direction at 2n+1; a direction bit of
+    # 1 makes the pin an output (P8 shares registers with input latches and
+    # is not described here)
+    ports={"P%d" % n: _port(2 * n, 2 * n + 1) for n in range(8)},
     symbols=[
         Symbol(0x000e, 'P7', 'Port P7'),
         Symbol(0x000f, 'P7D', 'Port P7 direction register'),
@@ -338,6 +366,26 @@ _define("M3886", parent="_m3800",
 )
 
 _define("50734",
+    # M50734: P0 has a per-bit function register (1 = special function), P1
+    # an input latch, P4 is input-only (A-D inputs).  A direction bit of 1
+    # makes the pin an output (init P0DIR=0x38 drives P0.3-5, matching the
+    # NX-1020 schematic).
+    ports={
+        "P0": _port(0xf6, 0xf7, function=0xf5),
+        "P1": _port(0xf3, 0xf4, input=0xf2),
+        "P2": _port(0xf0, 0xf1),
+        "P3": _port(0xee, 0xef),
+        "P4": _port(0xeb),
+    },
+    # Second 64K data space selected by DME (P0.5 special function, enabled
+    # by P0FUNC bit 5).  Only the (zp),Y mode performs a data cycle DME
+    # redirects; (zp,X), direct and absolute modes always reach the program
+    # space.  The datasheet does not name the modes: this rests on the
+    # observed behavior of real firmware (the Star NX-1020).
+    spaces={
+        "dme": {"enable": (0xf5, 5, 1),
+                "modes": (AddressModes.IndirectY,)},
+    },
     vector_table=[
         0xfff4,
         0xfff6,

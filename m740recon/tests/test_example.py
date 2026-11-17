@@ -68,8 +68,18 @@ class ExampleDocTests(unittest.TestCase):
     def test_addrtable_and_comments(self):
         self.assertEqual(len(self.cf.addr_tables), 1)
         self.assertEqual(self.cf.addr_tables[0].label_prefix, "cmd_")
-        # the hardware-wiring note on Port P2 is the point of the comment directive
-        self.assertIn(0x0004, self.cf.comments)
+        self.assertIn(0x001e, self.cf.comments)
+
+    def test_signals_shown(self):
+        from m740recon import command
+        kinds = {d.kind for d in self.cf.signals}
+        self.assertEqual(kinds, {"pin", "bit"})
+        self.assertTrue(any(d.hi != d.lo for d in self.cf.signals))   # a field
+        self.assertEqual([g.name for g in self.cf.groups], ["audio"])
+        smap = command.build_signal_map(self.cf, self.cf.device)
+        self.assertEqual(smap.by_name["MUTE"].address, 0x0004)
+        self.assertEqual(smap.pointers[0x60].target, 0x6000)
+        self.assertEqual(smap.by_name["LCD_BUSY"].access, "read")
 
 
 def _update():

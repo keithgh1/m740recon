@@ -32,7 +32,7 @@ the automatic symbol generator never overwrites them.
 """
 
 import os
-import shlex
+import re
 from collections import namedtuple
 
 from m740recon.symbols import Symbol
@@ -47,6 +47,32 @@ Segment = namedtuple("Segment", "name start end kind path off")
 # `label_prefix` is set) the target is named prefix+token(entry).
 AddrTable = namedtuple(
     "AddrTable", "start end count stride entryoff terminator label_prefix names")
+
+# A hardware or flag signal as written in the control file (`pin` / `bit`).
+# `addr` is an int or an unresolved name (an SFR or a label); it is resolved
+# against the symbol table once the device is known (see signals.py).  `lo`
+# and `hi` are the bit range (equal for a single bit).  `where` locates the
+# directive for error messages.
+# `space` names a second address space (None = the program space) and
+# `access` limits the signal to reads or writes of its bits (None = both), so
+# a register whose bits mean one thing when read and another when written can
+# carry one signal of each.
+SignalDecl = namedtuple(
+    "SignalDecl",
+    "kind addr lo hi name direction active high low source description where "
+    "space access", defaults=(None, None))
+
+# `pointer ADDR TARGET [space=NAME]`: the zero-page pair at ADDR holds the
+# fixed address TARGET (in space NAME), so indirect accesses through it can be
+# attributed.  `addr` may be an unresolved label name.
+PointerDecl = namedtuple("PointerDecl", "addr target space comment where")
+
+# `group NAME SIGNAL...`: related signals reported together.
+GroupDecl = namedtuple("GroupDecl", "name members description where")
+
+_IDENT_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+_SIGNAL_SOURCES = ("schematic", "firmware", "datasheet", "guess")
+_PIN_DIRECTIONS = ("in", "out", "bidir")
 
 # optional `names=ascii` map: control-code mnemonics + punctuation names, so a
 # dispatch table named e.g. label=ctl_ produces ctl_BEL, ctl_LF, cmd_esc_bang.
@@ -81,6 +107,9 @@ class ControlFile(object):
         self.ranges = []                # list of (start, end, kind) data ranges
         self._symbols_by_addr = {}      # addr -> Symbol (first writer wins)
         self.comments = {}              # addr -> text (comment-only directives)
+        self.signals = []               # list of SignalDecl (pin / bit)
+        self.groups = []                # list of GroupDecl
+        self.pointers = []              # list of PointerDecl
 
     def build_image(self):
         """Assemble the 64K image described by the segment directives."""
@@ -177,6 +206,214 @@ def _token(tbl, keybyte, index):
     return str(index)
 
 
+class _Token(str):
+    """A control-file token.  `quoted` is True when the whole token was one
+    quoted string, so it is text (a description or comment), never an
+    option, a direction or a name."""
+    quoted = False
+
+
+def _tokenize(raw):
+    """Split one control-file line the way shlex.split(posix, comments)
+    does, but remember which tokens were wholly quoted.  Raises ValueError
+    on an unterminated quote."""
+    tokens = []
+    i, n = 0, len(raw)
+    while i < n:
+        c = raw[i]
+        if c.isspace():
+            i += 1
+            continue
+        if c == "#":
+            break
+        chars = []
+        segments = 0
+        whole_quote = c in "\"'"
+        while i < n and not raw[i].isspace():
+            c = raw[i]
+            if c == "#":
+                i = n                         # comment ends token and line
+                break
+            if c in "\"'":
+                quote = c
+                i += 1
+                closed = False
+                while i < n:
+                    c = raw[i]
+                    if c == quote:
+                        closed = True
+                        i += 1
+                        break
+                    if (quote == '"' and c == "\\" and i + 1 < n and
+                            raw[i + 1] in '"\\'):
+                        chars.append(raw[i + 1])
+                        i += 2
+                        continue
+                    chars.append(c)
+                    i += 1
+                if not closed:
+                    raise ValueError("No closing quotation")
+                segments += 1
+                continue
+            if c == "\\" and i + 1 < n:
+                chars.append(raw[i + 1])
+                i += 2
+                segments += 2                 # not a single quoted string
+                continue
+            chars.append(c)
+            i += 1
+            segments += 2
+        tok = _Token("".join(chars))
+        tok.quoted = whole_quote and segments == 1
+        tokens.append(tok)
+    return tokens
+
+
+def _parse_loc(token, where):
+    """Parse ADDR.BIT or ADDR.LO-HI (either order).  ADDR is a number or a
+    name; returns (addr, lo, hi) with addr an int or a str."""
+    if "." not in token:
+        raise ControlError("%s: signal location %r must be ADDR.BIT or "
+                           "ADDR.LO-HI" % (where, token))
+    addr_s, bits_s = token.rsplit(".", 1)
+    if not addr_s:
+        raise ControlError("%s: signal location %r has no address"
+                           % (where, token))
+    try:
+        addr = int(addr_s, 0)
+    except ValueError:
+        if not _IDENT_RE.match(addr_s):
+            raise ControlError("%s: bad signal address %r" % (where, addr_s))
+        addr = addr_s
+    else:
+        if not 0 <= addr <= 0xFFFF:
+            raise ControlError("%s: signal address 0x%x out of range"
+                               % (where, addr))
+    parts = bits_s.split("-")
+    if len(parts) > 2 or not all(p.isdigit() for p in parts):
+        raise ControlError("%s: bad bit %r (use 0-7 or LO-HI)" % (where, bits_s))
+    nums = [int(p) for p in parts]
+    if any(n > 7 for n in nums):
+        raise ControlError("%s: bit number out of range 0-7 in %r"
+                           % (where, token))
+    lo, hi = min(nums), max(nums)
+    return addr, lo, hi
+
+
+def _parse_signal(op, args, where):
+    """Parse the arguments of a `pin` or `bit` directive."""
+    usage = ("pin LOC NAME [in|out|bidir] [active=high|low] [high=TEXT] "
+             "[low=TEXT] [source=...] [\"description\"]" if op == "pin" else
+             "bit LOC NAME [high=TEXT] [low=TEXT] [source=...] "
+             "[space=NAME] [access=read|write] [\"description\"]")
+    if len(args) < 2:
+        raise ControlError("%s: %s" % (where, usage))
+    addr, lo, hi = _parse_loc(args[0], where)
+    name = args[1]
+    if not _IDENT_RE.match(name):
+        raise ControlError("%s: bad signal name %r" % (where, name))
+    opts = {"active": None, "high": None, "low": None, "source": None,
+            "space": None, "access": None}
+    direction = None
+    description = None
+    for tok in args[2:]:
+        if getattr(tok, "quoted", False):
+            if description is not None:
+                raise ControlError("%s: unexpected %r (only one description "
+                                   "is allowed)" % (where, str(tok)))
+            description = str(tok)
+            continue
+        key, eq, val = tok.partition("=")
+        if eq and _IDENT_RE.match(key):
+            key = key.lower()
+            if op == "pin":
+                allowed = ("active", "high", "low", "source")
+            else:
+                allowed = ("high", "low", "source", "space", "access")
+            if key not in allowed:
+                raise ControlError("%s: unknown %s option %r" % (where, op, key))
+            if opts[key] is not None:
+                raise ControlError("%s: option %r given twice" % (where, key))
+            opts[key] = val
+        elif tok.lower() in _PIN_DIRECTIONS and description is None:
+            if op != "pin":
+                raise ControlError("%s: bit has no direction (use pin for a "
+                                   "port pin)" % where)
+            if direction is not None:
+                raise ControlError("%s: direction given twice (%s, %s)"
+                                   % (where, direction, tok.lower()))
+            direction = tok.lower()
+        elif description is None:
+            description = tok
+        else:
+            raise ControlError("%s: unexpected %r (quote a description that "
+                               "contains spaces)" % (where, tok))
+    if opts["active"] is not None:
+        opts["active"] = opts["active"].lower()
+        if opts["active"] not in ("high", "low"):
+            raise ControlError("%s: active= must be high or low" % where)
+    if opts["source"] is not None:
+        opts["source"] = opts["source"].lower()
+        if opts["source"] not in _SIGNAL_SOURCES:
+            raise ControlError("%s: source= must be one of %s"
+                               % (where, "/".join(_SIGNAL_SOURCES)))
+    if opts["access"] is not None:
+        opts["access"] = opts["access"].lower()
+        if opts["access"] not in ("read", "write"):
+            raise ControlError("%s: access= must be read or write" % where)
+    if opts["space"] is not None and not _IDENT_RE.match(opts["space"]):
+        raise ControlError("%s: bad space name %r" % (where, opts["space"]))
+    return SignalDecl(op, addr, lo, hi, name, direction, opts["active"],
+                      opts["high"], opts["low"], opts["source"],
+                      description or "", where, opts["space"], opts["access"])
+
+
+def _parse_pointer(args, where):
+    """pointer ADDR TARGET [space=NAME] ["comment"]"""
+    if not 2 <= len(args) <= 4:
+        raise ControlError("%s: pointer ADDR TARGET [space=NAME] "
+                           "[\"comment\"]" % where)
+    try:
+        addr = int(args[0], 0)
+    except ValueError:
+        if not _IDENT_RE.match(args[0]):
+            raise ControlError("%s: bad pointer address %r" % (where, args[0]))
+        addr = args[0]
+    else:
+        if not 0 <= addr <= 0xFE:
+            raise ControlError("%s: pointer 0x%x must be a zero-page address "
+                               "(0x00-0xfe)" % (where, addr))
+    try:
+        target = int(args[1], 0)
+    except ValueError:
+        raise ControlError("%s: bad pointer target %r" % (where, args[1]))
+    if not 0 <= target <= 0xFFFF:
+        raise ControlError("%s: pointer target 0x%x out of range"
+                           % (where, target))
+    space = None
+    comment = ""
+    for tok in args[2:]:
+        if getattr(tok, "quoted", False):
+            if comment:
+                raise ControlError("%s: unexpected %r" % (where, str(tok)))
+            comment = str(tok)
+            continue
+        key, eq, val = tok.partition("=")
+        if eq and key.lower() == "space":
+            if space is not None:
+                raise ControlError("%s: option 'space' given twice" % where)
+            if not _IDENT_RE.match(val):
+                raise ControlError("%s: bad space name %r" % (where, val))
+            space = val
+        elif eq and _IDENT_RE.match(key):
+            raise ControlError("%s: unknown pointer option %r" % (where, key))
+        elif not comment:
+            comment = tok
+        else:
+            raise ControlError("%s: unexpected %r" % (where, tok))
+    return PointerDecl(addr, target, space, comment, where)
+
+
 def _parse_int(token, lineno):
     try:
         return int(token, 0)
@@ -187,17 +424,103 @@ def _parse_int(token, lineno):
 def parse(text, base_dir=None):
     """Parse control-file text and return a ControlFile."""
     cf = ControlFile(base_dir=base_dir)
+    _parse_into(cf, text, base_dir, None, ())
+    return cf
+
+
+def _parse_into(cf, text, base_dir, source, stack):
+    """Parse `text` into `cf`.  `source` names the file for error messages
+    (None for the top-level text, whose messages stay "line N: ...");
+    `stack` holds the absolute paths of the files currently being included,
+    for cycle detection."""
     for lineno, raw in enumerate(text.splitlines(), 1):
         try:
-            tokens = shlex.split(raw, comments=True)
+            _parse_line(cf, raw, lineno, base_dir, source, stack)
+        except ControlError as e:
+            if source is None or getattr(e, "located", False):
+                raise
+            err = ControlError("%s: %s" % (source, e))
+            err.located = True
+            raise err
+
+
+def _resolve_path(path, base_dir):
+    if os.path.isabs(path):
+        return path
+    return os.path.join(base_dir or ".", path)
+
+
+def _parse_line(cf, raw, lineno, base_dir, source, stack):
+    if True:
+        try:
+            tokens = _tokenize(raw)
         except ValueError as e:
             raise ControlError("line %d: %s" % (lineno, e))
         if not tokens:
-            continue
+            return
         op = tokens[0].lower()
         args = tokens[1:]
 
-        if op == "device":
+        if op == "include":
+            if len(args) != 1:
+                raise ControlError("line %d: include PATH" % lineno)
+            path = os.path.abspath(_resolve_path(args[0], base_dir))
+            # compare real paths, so a file reached again through a link is
+            # still a cycle
+            key = os.path.normcase(os.path.realpath(path))
+            if key in [os.path.normcase(os.path.realpath(p)) for p in stack]:
+                chain = " -> ".join(os.path.basename(p) for p in stack + (path,))
+                raise ControlError("line %d: include cycle: %s" % (lineno, chain))
+            try:
+                with open(path, "r") as f:
+                    sub = f.read()
+            except OSError as e:
+                raise ControlError("line %d: include %s: %s"
+                                   % (lineno, args[0], e.strerror or e))
+            _parse_into(cf, sub, os.path.dirname(path), path, stack + (path,))
+
+        elif op in ("pin", "bit"):
+            where = "line %d" % lineno
+            if source is not None:
+                where = "%s: line %d" % (source, lineno)
+            try:
+                cf.signals.append(_parse_signal(op, args, where))
+            except ControlError as e:
+                e.located = True
+                raise
+
+        elif op == "pointer":
+            where = "line %d" % lineno
+            if source is not None:
+                where = "%s: line %d" % (source, lineno)
+            try:
+                cf.pointers.append(_parse_pointer(args, where))
+            except ControlError as e:
+                e.located = True
+                raise
+
+        elif op == "group":
+            where = "line %d" % lineno
+            if source is not None:
+                where = "%s: line %d" % (source, lineno)
+            if len(args) < 2:
+                err = ControlError("%s: group NAME SIGNAL [SIGNAL...] "
+                                   "[\"description\"]" % where)
+                err.located = True
+                raise err
+            members = list(args[1:])
+            description = ""
+            # a quoted final token is the description, even a one-word one
+            if getattr(members[-1], "quoted", False) and len(members) > 1:
+                description = str(members.pop())
+            for m in [args[0]] + members:
+                if not _IDENT_RE.match(m):
+                    err = ControlError("%s: bad name %r in group" % (where, m))
+                    err.located = True
+                    raise err
+            cf.groups.append(GroupDecl(args[0], members, description, where))
+
+        elif op == "device":
             if len(args) != 1:
                 raise ControlError("line %d: device needs one name" % lineno)
             cf.device = args[0]
@@ -245,6 +568,8 @@ def parse(text, base_dir=None):
                     off = _parse_int(off_s, lineno)
                 else:
                     path, off = src, 0
+                if source is not None:
+                    path = _resolve_path(path, base_dir)
                 cf.segments.append(Segment(name, start, end, "file", path, off))
 
         elif op == "range":
@@ -305,10 +630,14 @@ def parse(text, base_dir=None):
         else:
             raise ControlError("line %d: unknown directive %r" % (lineno, op))
 
-    return cf
-
 
 def load(path):
-    base_dir = os.path.dirname(os.path.abspath(path))
+    """Parse the control file at `path`.  Every error names the file and
+    line it comes from."""
+    path = os.path.abspath(path)
+    base_dir = os.path.dirname(path)
     with open(path, "r") as f:
-        return parse(f.read(), base_dir=base_dir)
+        text = f.read()
+    cf = ControlFile(base_dir=base_dir)
+    _parse_into(cf, text, base_dir, path, (path,))
+    return cf

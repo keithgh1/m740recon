@@ -1,0 +1,590 @@
+; m740recon signal report
+; device M50734, 41 signals, 442 accesses
+
+[group eeprom] BR93C46 serial EEPROM (IC9)
+
+EE_CS (P1.0)  out, active high   [source: schematic]  EEPROM chip select
+  reset     0x8154  write      EE_CS = 0 (not asserted)
+  reset     0x8158  direction  EE_CS: output
+  sub_ff6e  0xff6e  set        EE_CS = 1 (asserted)
+  sub_ff71  0xff71  clear      EE_CS = 0 (not asserted)
+  reached from 213 routine(s): cmd_esc_3, cmd_esc_5, cmd_esc_7, cmd_esc_8, cmd_esc_A, cmd_esc_C, cmd_esc_D, cmd_esc_E, +205 more
+
+EE_SK (P1.1)  out   [source: schematic]  EEPROM serial clock
+  reset     0x8154  write      EE_SK = 0
+  reset     0x8158  direction  EE_SK: output
+  sub_ff7a  0xff7d  set        EE_SK = 1
+  sub_ff7a  0xff84  clear      EE_SK = 0
+  reached from 214 routine(s): cmd_esc_3, cmd_esc_5, cmd_esc_7, cmd_esc_8, cmd_esc_A, cmd_esc_C, cmd_esc_D, cmd_esc_E, +206 more
+
+EE_DI (P1.2)  out   [source: schematic]  EEPROM data in
+  reset     0x8154  write      EE_DI = 0
+  reset     0x8158  direction  EE_DI: output
+  sub_ff74  0xff74  set        EE_DI = 1
+  sub_ff77  0xff77  clear      EE_DI = 0
+  reached from 214 routine(s): cmd_esc_3, cmd_esc_5, cmd_esc_7, cmd_esc_8, cmd_esc_A, cmd_esc_C, cmd_esc_D, cmd_esc_E, +206 more
+
+EE_ORG (P1.3)  in   [source: schematic]  EEPROM pin 6 (NC/ORG), inert
+  (never accessed)
+  reset     0x8158  direction  EE_ORG: input
+
+EE_DO (P1.4)  in   [source: schematic]  EEPROM data out
+  eeprom_read  0x773e  test       EE_DO: branch if clear
+  eeprom_read  0x774d  test       EE_DO: branch if clear
+  sub_77f2     0x77fc  test       EE_DO: branch if clear
+  reset        0x8158  direction  EE_DO: input
+
+[group panel] control panel buttons
+
+BTN_FONT (P3.3)  in, active low   [source: schematic]  /FONT button
+  reset       0x816c  direction  BTN_FONT: input
+  panel_read  0xff94  read       reads BTN_FONT
+  panel_read  0xff98  read       reads BTN_FONT
+
+BTN_PITCH (P3.4)  in, active low   [source: schematic]  /PITCH button
+  reset       0x816c  direction  BTN_PITCH: input
+  panel_read  0xff94  read       reads BTN_PITCH
+  panel_read  0xff98  read       reads BTN_PITCH
+
+BTN_SET (P3.5)  in, active low   [source: schematic]  /SET button
+  reset       0x816c  direction  BTN_SET: input
+  panel_read  0xff94  read       reads BTN_SET
+  panel_read  0xff98  read       reads BTN_SET
+
+BTN_PF (P3.6)  in, active low   [source: schematic]  /PF paper-feed button
+  sub_4cd1    0x4e11  test       BTN_PF: branch if not asserted
+  reset       0x816c  direction  BTN_PF: input
+  panel_read  0xff94  read       reads BTN_PF
+  panel_read  0xff98  read       reads BTN_PF
+
+BTN_OL (P3.7)  in, active low   [source: schematic]  /OL on-line button
+  sub_4cd1    0x4e14  test       BTN_OL: branch if not asserted
+  sub_4e69    0x4e6b  test       BTN_OL: branch if not asserted
+  sub_65de    0x6668  test       BTN_OL: branch if asserted
+  reset       0x816c  direction  BTN_OL: input
+  sub_f394    0xf3eb  test       BTN_OL: branch if not asserted
+  panel_read  0xff94  read       reads BTN_OL
+  panel_read  0xff98  read       reads BTN_OL
+
+[group host_if] Centronics host interface (gate array)
+
+HOST_BYTE_READY (dme:0x4000.7)  high = host byte waiting   [source: firmware]  IA7: reg0 bit 7
+  get_rx_byte  0x6545  test       HOST_BYTE_READY: branch if host byte waiting
+  sub_7e6d     0x7e87  test       HOST_BYTE_READY: branch if clear
+  ctl_CR       0x94f5  test       HOST_BYTE_READY: branch if host byte waiting
+  ctl_LF       0x9555  test       HOST_BYTE_READY: branch if host byte waiting
+  ctl_LF       0x9572  test       HOST_BYTE_READY: branch if host byte waiting
+
+HOST_DATA (dme:0x4001.0-7)   [source: firmware]  reg1: latched host data byte
+  get_rx_byte  0x64e7  read       reads HOST_DATA
+  sub_6587     0x6595  read       reads HOST_DATA
+
+HOST_IF_EN (dme:0x4002.0)   [source: firmware]  reg2: host interface enable
+  reset     0x837e  set        HOST_IF_EN = 1
+  sub_f3fb  0xf432  write      writes HOST_IF_EN (value unknown)
+  sub_f663  0xf66f  write      writes HOST_IF_EN (value unknown)
+  sub_ff61  0xff68  write      writes HOST_IF_EN (value unknown)
+  reached from 264 routine(s): beep_long, beep_paper_out, beep_tone, cmd_esc_3, cmd_esc_5, cmd_esc_7, cmd_esc_8, cmd_esc_A, +256 more
+
+HOST_ACK (dme:0x4002.2)   [source: firmware]  reg2: /ACK pulse, clears IA7
+  sub_65de  0x65e6  set        HOST_ACK = 1
+  sub_65de  0x65f7  clear      HOST_ACK = 0
+  reset     0x8379  set        HOST_ACK = 1
+  reset     0x838d  clear      HOST_ACK = 0
+  sub_f3fb  0xf432  write      writes HOST_ACK (value unknown)
+  sub_f663  0xf66f  write      writes HOST_ACK (value unknown)
+  sub_ff61  0xff68  write      writes HOST_ACK (value unknown)
+  reached from 263 routine(s): beep_long, beep_paper_out, beep_tone, cmd_esc_3, cmd_esc_5, cmd_esc_7, cmd_esc_8, cmd_esc_A, +255 more
+
+HOST_FAULT (dme:0x4002.3)   [source: firmware]  reg2: fault / off line to host
+  sub_f3fb  0xf432  write      writes HOST_FAULT (value unknown)
+  sub_f663  0xf66f  write      writes HOST_FAULT (value unknown)
+  sub_ff61  0xff68  write      writes HOST_FAULT (value unknown)
+  reached from 265 routine(s): beep_long, beep_paper_out, beep_tone, cmd_esc_3, cmd_esc_5, cmd_esc_7, cmd_esc_8, cmd_esc_A, +257 more
+
+HOST_SELECT (dme:0x4002.4)   [source: firmware]  reg2: SELECT (Centronics pin 13)
+  sub_f3fb  0xf432  write      writes HOST_SELECT (value unknown)
+  sub_f663  0xf66f  write      writes HOST_SELECT (value unknown)
+  sub_ff61  0xff68  write      writes HOST_SELECT (value unknown)
+  reached from 265 routine(s): beep_long, beep_paper_out, beep_tone, cmd_esc_3, cmd_esc_5, cmd_esc_7, cmd_esc_8, cmd_esc_A, +257 more
+
+HOST_PE (dme:0x4002.5)   [source: firmware]  reg2: paper empty (Centronics pin 12)
+  sub_f3fb  0xf432  write      writes HOST_PE (value unknown)
+  sub_f663  0xf66f  write      writes HOST_PE (value unknown)
+  sub_ff61  0xff68  write      writes HOST_PE (value unknown)
+  reached from 265 routine(s): beep_long, beep_paper_out, beep_tone, cmd_esc_3, cmd_esc_5, cmd_esc_7, cmd_esc_8, cmd_esc_A, +257 more
+
+[group lamps] front-panel lamps (gate array reg3)
+
+LAMP_POWER (dme:0x4003.0)   [source: firmware]  reg3: POWER lamp
+  sub_ff61  0xff68  write      writes LAMP_POWER (value unknown)
+  reached from 249 routine(s): beep_long, beep_paper_out, beep_tone, cmd_esc_3, cmd_esc_5, cmd_esc_7, cmd_esc_8, cmd_esc_A, +241 more
+
+LAMP_ONLINE (dme:0x4003.1)   [source: firmware]  reg3: ON LINE lamp
+  sub_c784  0xc7d4  set        LAMP_ONLINE = 1
+  sub_d961  0xd9b4  clear      LAMP_ONLINE = 0
+  sub_d961  0xd9d0  set        LAMP_ONLINE = 1
+  sub_ff61  0xff68  write      writes LAMP_ONLINE (value unknown)
+  reached from 247 routine(s): beep_long, beep_paper_out, beep_tone, cmd_esc_3, cmd_esc_5, cmd_esc_7, cmd_esc_8, cmd_esc_A, +239 more
+
+LAMP_QUIET (dme:0x4003.2)   [source: firmware]  reg3: QUIET lamp
+  sub_c71b  0xc740  clear      LAMP_QUIET = 0
+  sub_c71b  0xc74e  set        LAMP_QUIET = 1
+  sub_ff61  0xff68  write      writes LAMP_QUIET (value unknown)
+  reached from 249 routine(s): beep_long, beep_paper_out, beep_tone, cmd_esc_3, cmd_esc_5, cmd_esc_7, cmd_esc_8, cmd_esc_A, +241 more
+
+[ungrouped]
+
+RELEASE_SW (P0.0)  in, high = friction position, low = tractor position   [source: schematic]  /RELEASE release-lever switch
+  sub_4f0f    0x4f12  test       RELEASE_SW: branch if friction position
+  sub_6b95    0x72d7  test       RELEASE_SW: branch if tractor position
+  reset       0x8148  function   RELEASE_SW: port
+  reset       0x8150  direction  RELEASE_SW: input
+  cmd_esc_LF  0x9672  test       RELEASE_SW: branch if friction position
+  cmd_esc_FF  0x96dc  test       RELEASE_SW: branch if friction position
+  cmd_esc_j   0xa9c9  test       RELEASE_SW: branch if friction position
+  sub_c784    0xc7e0  test       RELEASE_SW: branch if friction position
+  sub_c784    0xc855  test       RELEASE_SW: branch if friction position
+  sub_cac9    0xcd56  test       RELEASE_SW: branch if friction position
+  sub_cac9    0xcdbe  test       RELEASE_SW: branch if friction position
+  sub_d0f6    0xd0fb  read       reads RELEASE_SW
+  sub_f081    0xf11b  read       reads RELEASE_SW
+  sub_f12d    0xf13c  read       reads RELEASE_SW
+
+IN_PRIME (P0.1)  in, active low   [source: schematic]  /INT2 = Centronics /IN-PRIME (host reset)
+  isr_int2  0x509c  test       IN_PRIME: branch if asserted
+  reset     0x8148  function   IN_PRIME: port
+  reset     0x8150  direction  IN_PRIME: input
+  sub_d0f6  0xd0fb  read       reads IN_PRIME
+  sub_f081  0xf11b  read       reads IN_PRIME
+  sub_f12d  0xf13c  read       reads IN_PRIME
+
+TRACTOR_SW (P0.2)  in, high = tractor up, low = tractor down   [source: schematic]  /TRACTOR tractor-position switch
+  sub_4f0f     0x4f0f  test       TRACTOR_SW: branch if tractor up
+  sub_4f81     0x4f84  test       TRACTOR_SW: branch if tractor down
+  sub_6b95     0x72fa  test       TRACTOR_SW: branch if tractor up
+  sub_6b95     0x731c  test       TRACTOR_SW: branch if tractor up
+  reset        0x8148  function   TRACTOR_SW: port
+  reset        0x8150  direction  TRACTOR_SW: input
+  reset        0x8355  test       TRACTOR_SW: branch if tractor up
+  sub_8404     0x8407  test       TRACTOR_SW: branch if tractor up
+  cmd_esc_LF   0x966f  test       TRACTOR_SW: branch if tractor up
+  cmd_esc_FF   0x96d9  test       TRACTOR_SW: branch if tractor up
+  ctrl_lookup  0xc36a  test       TRACTOR_SW: branch if tractor up
+  sub_c784     0xc7e3  test       TRACTOR_SW: branch if tractor up
+  sub_c784     0xc858  test       TRACTOR_SW: branch if tractor up
+  sub_cac9     0xcd53  test       TRACTOR_SW: branch if tractor up
+  sub_cac9     0xcdc1  test       TRACTOR_SW: branch if tractor up
+  sub_d060     0xd063  test       TRACTOR_SW: branch if tractor down
+  sub_d0b1     0xd0c4  test       TRACTOR_SW: branch if tractor down
+  sub_d0b1     0xd0c8  test       TRACTOR_SW: branch if tractor up
+  sub_d0b1     0xd0da  test       TRACTOR_SW: branch if tractor up
+  sub_d0f6     0xd0fb  read       reads TRACTOR_SW
+  sub_d22f     0xd232  test       TRACTOR_SW: branch if tractor up
+  sub_d522     0xd528  test       TRACTOR_SW: branch if tractor down
+  sub_f081     0xf11b  read       reads TRACTOR_SW
+  sub_f12d     0xf13c  read       reads TRACTOR_SW
+
+BUSY_PIN (P0.3)  out   [source: firmware]  BUSYout special function disabled; static HIGH, never touched
+  reset     0x8148  function   BUSY_PIN: port
+  reset     0x814c  write      BUSY_PIN = 1
+  reset     0x8150  direction  BUSY_PIN: output
+  sub_d0f6  0xd0fb  read       reads BUSY_PIN
+  sub_f081  0xf11b  read       reads BUSY_PIN
+  sub_f12d  0xf13c  read       reads BUSY_PIN
+  reached from 206 routine(s): cmd_esc_3, cmd_esc_5, cmd_esc_7, cmd_esc_8, cmd_esc_A, cmd_esc_C, cmd_esc_D, cmd_esc_E, +198 more
+
+HEAD_STB (P0.4)  out, active low   [source: datasheet]  print-head energize strobe (STBOUT)
+  sub_42be   0x42c1  test       HEAD_STB: branch if asserted
+  sub_42be   0x42c7  function   HEAD_STB: port
+  isr_int2   0x5065  function   HEAD_STB: port
+  isr_int2   0x5067  set        HEAD_STB = 1 (not asserted)
+  beep_tone  0x647e  function   HEAD_STB: special function
+  beep_tone  0x6483  clear      HEAD_STB = 0 (asserted)
+  beep_tone  0x64a3  function   HEAD_STB: port
+  sub_7d7f   0x7d8e  function   HEAD_STB: port
+  sub_7d7f   0x7d90  set        HEAD_STB = 1 (not asserted)
+  reset      0x8148  function   HEAD_STB: port
+  reset      0x814c  write      HEAD_STB = 1 (not asserted)
+  reset      0x8150  direction  HEAD_STB: output
+  reset      0x8187  set        HEAD_STB = 1 (not asserted)
+  reset      0x82c0  function   HEAD_STB: special function
+  reset      0x82c5  clear      HEAD_STB = 0 (asserted)
+  reset      0x82d9  function   HEAD_STB: port
+  sub_d0f6   0xd0fb  read       reads HEAD_STB
+  sub_f081   0xf11b  read       reads HEAD_STB
+  sub_f12d   0xf13c  read       reads HEAD_STB
+  sub_f394   0xf3a2  test       HEAD_STB: branch if asserted
+  sub_f394   0xf3cc  function   HEAD_STB: special function
+  sub_f394   0xf3dc  clear      HEAD_STB = 0 (asserted)
+  reached from 250 routine(s): beep_long, beep_paper_out, cmd_esc_3, cmd_esc_5, cmd_esc_7, cmd_esc_8, cmd_esc_A, cmd_esc_C, +242 more
+
+DME (P0.5)  out   [source: datasheet]  data-memory enable (special function)
+  isr_timer123  0x49cb  function   DME: special function
+  isr_timer123  0x49e0  function   DME: port
+  isr_timer123  0x49fb  set        DME = 1
+  isr_timer123  0x49fd  function   DME: port
+  isr_timer123  0x4c52  function   DME: special function
+  sub_6587      0x6591  function   DME: special function
+  sub_65de      0x65e8  set        DME = 1
+  sub_65de      0x65ea  function   DME: port
+  sub_65de      0x65f0  function   DME: special function
+  sub_7cf5      0x7cf5  function   DME: special function
+  sub_7cf8      0x7cf8  set        DME = 1
+  sub_7cf8      0x7cfa  function   DME: port
+  sub_7e6d      0x7e7b  function   DME: special function
+  reset         0x8148  function   DME: special function
+  reset         0x814c  write      DME = 1
+  reset         0x8150  direction  DME: output
+  reset         0x823d  function   DME: special function
+  reset         0x8380  set        DME = 1
+  reset         0x8382  function   DME: port
+  reset         0x8386  function   DME: special function
+  sub_c71b      0xc739  function   DME: special function
+  sub_c71b      0xc747  function   DME: special function
+  sub_c784      0xc7cd  function   DME: special function
+  sub_d0f6      0xd0fb  read       reads DME
+  sub_d961      0xd9ad  function   DME: special function
+  sub_f081      0xf11b  read       reads DME
+  sub_f12d      0xf13c  read       reads DME
+  sub_f3fb      0xf425  function   DME: special function
+  sub_ff3d      0xff42  function   DME: special function
+  sub_ff61      0xff66  function   DME: special function
+  reached from 208 routine(s): cmd_esc_3, cmd_esc_5, cmd_esc_7, cmd_esc_8, cmd_esc_A, cmd_esc_C, cmd_esc_D, cmd_esc_E, +200 more
+
+PE (P0.6)  in, high = paper end, low = paper present   [source: firmware]  paper-end sensor
+  sub_4cd1     0x4d0b  test       PE: branch if paper present
+  sub_4e69     0x4ea3  test       PE: branch if paper end
+  sub_4e69     0x4eb8  test       PE: branch if paper end
+  sub_6b95     0x72dd  test       PE: branch if paper present
+  sub_6b95     0x730a  test       PE: branch if paper present
+  sub_6b95     0x732e  test       PE: branch if paper present
+  sub_6b95     0x7336  test       PE: branch if paper present
+  sub_6b95     0x733e  test       PE: branch if paper present
+  sub_6b95     0x7346  test       PE: branch if paper present
+  reset        0x8148  function   PE: port
+  reset        0x8150  direction  PE: input
+  reset        0x83a0  test       PE: branch if paper end
+  sub_8404     0x8485  test       PE: branch if paper present
+  ctl_FF       0x96a6  test       PE: branch if paper present
+  ctrl_lookup  0xc334  test       PE: branch if paper end
+  ctrl_lookup  0xc361  test       PE: branch if paper present
+  ctrl_lookup  0xc37a  test       PE: branch if paper end
+  sub_c759     0xc76d  test       PE: branch if paper present
+  sub_cac9     0xcd5c  test       PE: branch if paper end
+  sub_cac9     0xcd78  test       PE: branch if paper end
+  sub_cac9     0xcde7  test       PE: branch if paper present
+  sub_d0b1     0xd0b4  test       PE: branch if paper present
+  sub_d0f6     0xd0fb  read       reads PE
+  sub_d0f6     0xd0ff  test       PE: branch if paper end
+  sub_d14b     0xd16e  test       PE: branch if paper present
+  sub_d22f     0xd22f  test       PE: branch if paper end
+  sub_d22f     0xd256  test       PE: branch if paper end
+  sub_d22f     0xd273  test       PE: branch if paper present
+  sub_d22f     0xd29e  test       PE: branch if paper end
+  sub_d2d4     0xd30d  test       PE: branch if paper present
+  sub_d32c     0xd407  test       PE: branch if paper present
+  sub_d40e     0xd411  test       PE: branch if paper end
+  sub_d40e     0xd41a  test       PE: branch if paper present
+  sub_d40e     0xd43f  test       PE: branch if paper present
+  sub_d40e     0xd46a  test       PE: branch if paper end
+  sub_d40e     0xd497  test       PE: branch if paper present
+  sub_d40e     0xd4b9  test       PE: branch if paper end
+  sub_d40e     0xd4dc  test       PE: branch if paper present
+  sub_d522     0xd530  test       PE: branch if paper end
+  sub_f081     0xf11b  read       reads PE
+  sub_f12d     0xf13c  read       reads PE
+
+HP (P0.7)  in, high = carriage at home, low = carriage away   [source: schematic]  home-position photo-interrupter
+  reset      0x8148  function   HP: port
+  reset      0x8150  direction  HP: input
+  sub_d0f6   0xd0fb  read       reads HP
+  home_seek  0xd842  test       HP: branch if carriage at home
+  home_seek  0xd862  test       HP: branch if carriage away
+  home_seek  0xd868  test       HP: branch if carriage away
+  home_seek  0xd896  test       HP: branch if carriage at home
+  home_seek  0xd89c  test       HP: branch if carriage at home
+  home_seek  0xd8c4  test       HP: branch if carriage away
+  home_seek  0xd8ca  test       HP: branch if carriage away
+  home_seek  0xd8df  test       HP: branch if carriage at home
+  home_seek  0xd8e5  test       HP: branch if carriage at home
+  home_seek  0xd8f1  test       HP: branch if carriage away
+  home_seek  0xd8f7  test       HP: branch if carriage away
+  home_seek  0xd900  test       HP: branch if carriage at home
+  home_seek  0xd906  test       HP: branch if carriage at home
+  sub_f081   0xf11b  read       reads HP
+  sub_f12d   0xf13c  read       reads HP
+
+P2L_PHASE (P2.0-3)  out   [source: datasheet]  four-phase stepper output channel P2L
+  isr_int2  0x5088  write      P2L_PHASE = 0
+  sub_7d7f  0x7db1  write      P2L_PHASE = 0
+  reset     0x8160  write      P2L_PHASE = 0
+  reset     0x8164  direction  P2L_PHASE: output
+  reached from 211 routine(s): cmd_esc_3, cmd_esc_5, cmd_esc_7, cmd_esc_8, cmd_esc_A, cmd_esc_C, cmd_esc_D, cmd_esc_E, +203 more
+
+P2H_PHASE (P2.4-7)  out   [source: datasheet]  four-phase stepper output channel P2H
+  isr_tx_cntr_brk  0x5030  write      P2H_PHASE = 0
+  isr_int2         0x5088  write      P2H_PHASE = 0
+  sub_7d7f         0x7db1  write      P2H_PHASE = 0
+  reset            0x8160  write      P2H_PHASE = 9
+  reset            0x8164  direction  P2H_PHASE: output
+  reached from 211 routine(s): cmd_esc_3, cmd_esc_5, cmd_esc_7, cmd_esc_8, cmd_esc_A, cmd_esc_C, cmd_esc_D, cmd_esc_E, +203 more
+
+CR_CMN_HV (P3.0)  out, high = +25 V drive, low = +5 V hold   [source: schematic]  carriage motor commons voltage select
+  sub_42e0      0x43b9  direction  CR_CMN_HV: input
+  sub_467b      0x46bf  clear      CR_CMN_HV = 0 (+5 V hold)
+  isr_timer123  0x4a8a  set        CR_CMN_HV = 1 (+25 V drive)
+  isr_timer123  0x4a8c  direction  CR_CMN_HV: input
+  isr_timer123  0x4af8  direction  CR_CMN_HV: output
+  isr_timer123  0x4bc7  set        CR_CMN_HV = 1 (+25 V drive)
+  isr_timer123  0x4bc9  direction  CR_CMN_HV: output
+  isr_timer123  0x4c10  clear      CR_CMN_HV = 0 (+5 V hold)
+  sub_7d7f      0x7da3  clear      CR_CMN_HV = 0 (+5 V hold)
+  reset         0x8168  write      CR_CMN_HV = 0 (+5 V hold)
+  reset         0x816c  direction  CR_CMN_HV: output
+  panel_read    0xff94  read       reads CR_CMN_HV
+  reached from 226 routine(s): cmd_esc_3, cmd_esc_5, cmd_esc_7, cmd_esc_8, cmd_esc_A, cmd_esc_C, cmd_esc_D, cmd_esc_E, +218 more
+
+LF_CMN_HV (P3.1)  out, high = +25 V drive, low = +5 V hold   [source: schematic]  line-feed motor commons voltage select
+  sub_4cd1    0x4d2b  clear      LF_CMN_HV = 0 (+5 V hold)
+  sub_4cd1    0x4d6a  set        LF_CMN_HV = 1 (+25 V drive)
+  isr_int2    0x5082  clear      LF_CMN_HV = 0 (+5 V hold)
+  sub_7d7f    0x7da1  clear      LF_CMN_HV = 0 (+5 V hold)
+  reset       0x8168  write      LF_CMN_HV = 0 (+5 V hold)
+  reset       0x816c  direction  LF_CMN_HV: output
+  sub_d6ef    0xd782  set        LF_CMN_HV = 1 (+25 V drive)
+  sub_d7e1    0xd7fc  set        LF_CMN_HV = 1 (+25 V drive)
+  sub_d7e1    0xd809  clear      LF_CMN_HV = 0 (+5 V hold)
+  sub_d7e1    0xd816  set        LF_CMN_HV = 1 (+25 V drive)
+  sub_d7e1    0xd823  clear      LF_CMN_HV = 0 (+5 V hold)
+  panel_read  0xff94  read       reads LF_CMN_HV
+  reached from 230 routine(s): cmd_esc_3, cmd_esc_5, cmd_esc_7, cmd_esc_8, cmd_esc_A, cmd_esc_C, cmd_esc_D, cmd_esc_E, +222 more
+
+DME_FUNC (P0FUNC.5)   [source: datasheet]  P0.5 special function: DME on
+  isr_timer123  0x49c2  test       DME_FUNC: branch if clear
+  isr_timer123  0x49cb  set        DME_FUNC = 1
+  isr_timer123  0x49e0  clear      DME_FUNC = 0
+  isr_timer123  0x49fd  clear      DME_FUNC = 0
+  isr_timer123  0x4c52  set        DME_FUNC = 1
+  sub_6587      0x6591  set        DME_FUNC = 1
+  sub_65de      0x65ea  clear      DME_FUNC = 0
+  sub_65de      0x65f0  set        DME_FUNC = 1
+  sub_7cf5      0x7cf5  set        DME_FUNC = 1
+  sub_7cf8      0x7cfa  clear      DME_FUNC = 0
+  sub_7e6d      0x7e7b  set        DME_FUNC = 1
+  reset         0x8148  write      DME_FUNC = 1
+  reset         0x823d  set        DME_FUNC = 1
+  reset         0x8382  clear      DME_FUNC = 0
+  reset         0x8386  set        DME_FUNC = 1
+  sub_c71b      0xc739  set        DME_FUNC = 1
+  sub_c71b      0xc747  set        DME_FUNC = 1
+  sub_c784      0xc7cd  set        DME_FUNC = 1
+  sub_d961      0xd9ad  set        DME_FUNC = 1
+  sub_f3fb      0xf425  set        DME_FUNC = 1
+  sub_ff3d      0xff42  set        DME_FUNC = 1
+  sub_ff61      0xff66  set        DME_FUNC = 1
+  reached from 257 routine(s): beep_long, beep_paper_out, beep_tone, cmd_esc_3, cmd_esc_5, cmd_esc_7, cmd_esc_8, cmd_esc_A, +249 more
+
+INT2_EN (ICON1.2)   [source: datasheet]  /INT2 (IN-PRIME) interrupt enable
+  isr_int2  0x508a  clear      INT2_EN = 0
+  reset     0x8171  set        INT2_EN = 1
+  reached from 206 routine(s): cmd_esc_3, cmd_esc_5, cmd_esc_7, cmd_esc_8, cmd_esc_A, cmd_esc_C, cmd_esc_D, cmd_esc_E, +198 more
+
+INT2_REQ (ICON1.3)   [source: datasheet]  /INT2 interrupt request
+  isr_int2  0x505f  clear      INT2_REQ = 0
+  reset     0x8173  clear      INT2_REQ = 0
+  reached from 206 routine(s): cmd_esc_3, cmd_esc_5, cmd_esc_7, cmd_esc_8, cmd_esc_A, cmd_esc_C, cmd_esc_D, cmd_esc_E, +198 more
+
+asf_installed (0x52.7)   [source: firmware]  ASF installed (EDS A-4)
+  sub_4f81     0x4f81  test       asf_installed: branch if set
+  sub_65de     0x666d  test       asf_installed: branch if clear
+  sub_6b95     0x72f7  test       asf_installed: branch if set
+  reset        0x839d  test       asf_installed: branch if clear
+  sub_8404     0x8404  test       asf_installed: branch if set
+  sub_8404     0x8488  test       asf_installed: branch if set
+  sub_8671     0x8671  test       asf_installed: branch if clear
+  sub_894c     0x894c  test       asf_installed: branch if clear
+  sub_8f93     0x8fc2  test       asf_installed: branch if clear
+  sub_8f93     0x8fe5  test       asf_installed: branch if set
+  sub_8f93     0x901a  test       asf_installed: branch if clear
+  sub_9053     0x9053  test       asf_installed: branch if clear
+  sub_91da     0x91dd  test       asf_installed: branch if clear
+  sub_92b1     0x931f  test       asf_installed: branch if clear
+  ctl_CR       0x950b  test       asf_installed: branch if clear
+  ctl_LF       0x95f9  test       asf_installed: branch if clear
+  ctl_FF       0x9698  test       asf_installed: branch if set
+  cmd_esc_FF   0x96d6  test       asf_installed: branch if set
+  cmd_esc_8    0xa045  test       asf_installed: branch if set
+  cmd_esc_9    0xa04d  test       asf_installed: branch if set
+  cmd_esc_f    0xa82b  test       asf_installed: branch if clear
+  cmd_esc_J    0xa997  test       asf_installed: branch if clear
+  cmd_esc_j    0xa9e5  test       asf_installed: branch if set
+  ctl_VT       0xb1e2  test       asf_installed: branch if clear
+  cmd_esc_EM   0xbcf2  test       asf_installed: branch if clear
+  cmd_esc_EM   0xbcf9  test       asf_installed: branch if clear
+  cmd_esc_EM   0xbd00  test       asf_installed: branch if clear
+  cmd_esc_EM   0xbd0e  test       asf_installed: branch if clear
+  cmd_esc_EM   0xbdfe  test       asf_installed: branch if clear
+  ctrl_lookup  0xc367  test       asf_installed: branch if set
+  sub_c538     0xc563  test       asf_installed: branch if clear
+  sub_c784     0xc79e  test       asf_installed: branch if clear
+  sub_c98d     0xc996  test       asf_installed: branch if set
+  sub_cac9     0xcc6e  test       asf_installed: branch if clear
+  sub_cac9     0xccf6  test       asf_installed: branch if clear
+  sub_cac9     0xcd50  test       asf_installed: branch if set
+  sub_cac9     0xcded  test       asf_installed: branch if clear
+  sub_d060     0xd060  test       asf_installed: branch if set
+  sub_d0b1     0xd0ba  test       asf_installed: branch if clear
+  sub_d0b1     0xd0ed  test       asf_installed: branch if set
+  sub_d125     0xd13a  test       asf_installed: branch if clear
+  sub_d2c3     0xd2c6  test       asf_installed: branch if set
+  sub_d40e     0xd40e  test       asf_installed: branch if clear
+  sub_d40e     0xd4eb  test       asf_installed: branch if clear
+  sub_d522     0xd52b  set        asf_installed = 1
+  sub_d522     0xd539  test       asf_installed: branch if clear
+  sub_d522     0xd53e  clear      asf_installed = 0
+  sub_d79a     0xd7a4  test       asf_installed: branch if set
+  reached from 211 routine(s): cmd_esc_3, cmd_esc_5, cmd_esc_7, cmd_esc_8, cmd_esc_A, cmd_esc_C, cmd_esc_D, cmd_esc_E, +203 more
+
+asf_selected (0x52.6)   [source: firmware]  ASF selected (ESC EM 0/4)
+  reset       0x833e  set        asf_selected = 1
+  sub_8671    0x8674  test       asf_selected: branch if clear
+  sub_920c    0x926d  test       asf_selected: branch if set
+  ctl_FF      0x96b2  test       asf_selected: branch if set
+  cmd_esc_EM  0xbcf5  clear      asf_selected = 0
+  cmd_esc_EM  0xbcfc  set        asf_selected = 1
+  sub_d40e    0xd4ee  test       asf_selected: branch if clear
+  reached from 205 routine(s): cmd_esc_3, cmd_esc_5, cmd_esc_7, cmd_esc_8, cmd_esc_A, cmd_esc_C, cmd_esc_D, cmd_esc_E, +197 more
+
+pe_detect_off (0x56.5)   [source: firmware]  paper-out detector disabled
+  sub_4e69   0x4eb4  test       pe_detect_off: branch if clear
+  sub_8404   0x848b  test       pe_detect_off: branch if clear
+  sub_92b1   0x92b7  write      pe_detect_off = 0
+  sub_92b1   0x93b1  clear      pe_detect_off = 0
+  sub_92b1   0x93b8  set        pe_detect_off = 1
+  cmd_esc_8  0xa048  set        pe_detect_off = 1
+  cmd_esc_9  0xa050  clear      pe_detect_off = 0
+  sub_c759   0xc767  test       pe_detect_off: branch if set
+  sub_cac9   0xcd59  test       pe_detect_off: branch if clear
+  sub_cac9   0xcd75  test       pe_detect_off: branch if clear
+  sub_cac9   0xcdea  test       pe_detect_off: branch if set
+  sub_d0b1   0xd0df  test       pe_detect_off: branch if set
+  sub_d0b1   0xd0ea  test       pe_detect_off: branch if set
+  sub_d22f   0xd286  test       pe_detect_off: branch if set
+  sub_d40e   0xd4e6  test       pe_detect_off: branch if set
+  sub_d522   0xd536  test       pe_detect_off: branch if set
+  reached from 208 routine(s): cmd_esc_3, cmd_esc_5, cmd_esc_7, cmd_esc_A, cmd_esc_C, cmd_esc_D, cmd_esc_E, cmd_esc_EM, +200 more
+
+unidirectional (0x5b.6)   [source: firmware]  ESC U: unidirectional printing
+  sub_4467   0x44b2  test       unidirectional: branch if clear
+  sub_8c79   0x8ccc  clear      unidirectional = 0
+  cmd_esc_U  0xa969  set        unidirectional = 1
+  cmd_esc_U  0xa96d  clear      unidirectional = 0
+  reached from 206 routine(s): cmd_esc_3, cmd_esc_5, cmd_esc_7, cmd_esc_8, cmd_esc_A, cmd_esc_C, cmd_esc_D, cmd_esc_E, +198 more
+
+elite_pitch (0x62.1)   [source: firmware]  elite pitch selected
+  sub_4000            0x400a  test       elite_pitch: branch if set
+  sub_4000            0x401b  test       elite_pitch: branch if set
+  sub_4166            0x4181  test       elite_pitch: branch if set
+  sub_4166            0x41ae  test       elite_pitch: branch if set
+  sub_65de            0x6612  clear      elite_pitch = 0
+  sub_65de            0x6690  clear      elite_pitch = 0
+  sub_65de            0x66be  clear      elite_pitch = 0
+  sub_65de            0x66c7  set        elite_pitch = 1
+  sub_66cf            0x66eb  clear      elite_pitch = 0
+  sub_66cf            0x66f4  set        elite_pitch = 1
+  sub_67a4            0x67ba  set        elite_pitch = 1
+  sub_67a4            0x6a6c  clear      elite_pitch = 0
+  sub_7543            0x7557  clear      elite_pitch = 0
+  sub_8671            0x8729  test       elite_pitch: branch if clear
+  sub_8aca            0x8ae1  test       elite_pitch: branch if set
+  sub_8b4b            0x8bb3  test       elite_pitch: branch if set
+  sub_8c0f            0x8c12  test       elite_pitch: branch if set
+  sub_8c0f            0x8c1d  test       elite_pitch: branch if set
+  sub_92b1            0x9340  clear      elite_pitch = 0
+  sub_92b1            0x935a  clear      elite_pitch = 0
+  sub_92b1            0x9376  clear      elite_pitch = 0
+  sub_92b1            0x938a  clear      elite_pitch = 0
+  sub_941e            0x946b  clear      elite_pitch = 0
+  sub_941e            0x9485  set        elite_pitch = 1
+  sub_941e            0x9495  set        elite_pitch = 1
+  cmd_esc_P           0x98d7  test       elite_pitch: branch if clear
+  cmd_esc_P           0x98dc  clear      elite_pitch = 0
+  cmd_esc_M           0x98eb  test       elite_pitch: branch if set
+  cmd_esc_M           0x98f4  set        elite_pitch = 1
+  ctl_SI              0x9908  test       elite_pitch: branch if clear
+  ctl_DC2             0x9933  test       elite_pitch: branch if set
+  ctl_ibm_DC2         0x99c7  clear      elite_pitch = 0
+  cmd_esc_ibm_M       0x99f2  write      writes elite_pitch (value unknown)
+  cmd_esc_ibm_M       0x99f4  test       elite_pitch: branch if set
+  cmd_esc_ibm_M       0x9a04  set        elite_pitch = 1
+  ctl_ibm_SI          0x9a18  write      writes elite_pitch (value unknown)
+  ctl_ibm_SI          0x9a1d  test       elite_pitch: branch if set
+  ctl_ibm_SI          0x9a32  clear      elite_pitch = 0
+  ctl_ibm_SI          0x9a58  write      writes elite_pitch (value unknown)
+  ctl_ibm_SI          0x9a5a  test       elite_pitch: branch if set
+  ctl_ibm_SI          0x9a6a  set        elite_pitch = 1
+  sub_9bc1            0x9bce  clear      elite_pitch = 0
+  sub_9c16            0x9c2c  test       elite_pitch: branch if set
+  sub_9e0b            0x9e19  test       elite_pitch: branch if clear
+  cmd_esc_ibm_lbrack  0xa2c8  write      writes elite_pitch (value unknown)
+  cmd_esc_ibm_lbrack  0xa2d0  read       reads elite_pitch
+  cmd_esc_ibm_lbrack  0xa2d7  clear      elite_pitch = 0
+  sub_a301            0xa306  read       reads elite_pitch
+  sub_a301            0xa310  clear      elite_pitch = 0
+  sub_a8a7            0xa8ac  test       elite_pitch: branch if set
+  sub_a8a7            0xa8b9  test       elite_pitch: branch if clear
+  sub_ab14            0xab22  read       reads elite_pitch
+  sub_ab14            0xab2b  write      elite_pitch = 0
+  sub_ab14            0xab35  write      writes elite_pitch (value unknown)
+  sub_ae3b            0xae3e  read       reads elite_pitch
+  sub_b068            0xb06b  read       reads elite_pitch
+  sub_bb35            0xbb62  test       elite_pitch: branch if clear
+  sub_bb35            0xbbce  set        elite_pitch = 1
+  cmd_esc_EM          0xbe21  read       reads elite_pitch
+  cmd_esc_EM          0xbe30  clear      elite_pitch = 0
+  cmd_esc_EM          0xbeb9  write      writes elite_pitch (value unknown)
+  ctrl_lookup         0xc318  clear      elite_pitch = 0
+  sub_cebd            0xcf27  clear      elite_pitch = 0
+  sub_cebd            0xcf64  write      writes elite_pitch (value unknown)
+  sub_f676            0xf6e3  test       elite_pitch: branch if clear
+  sub_f676            0xf892  test       elite_pitch: branch if clear
+  sub_f676            0xf8b8  test       elite_pitch: branch if set
+  sub_f676            0xf908  test       elite_pitch: branch if set
+  sub_f676            0xfa5d  test       elite_pitch: branch if set
+  reached from 192 routine(s): cmd_esc_3, cmd_esc_5, cmd_esc_7, cmd_esc_8, cmd_esc_A, cmd_esc_C, cmd_esc_D, cmd_esc_E, +184 more
+
+HEAD_DATA (dme:0x4000.0-7)   [source: firmware]  reg0: print-head data
+  sub_f394  0xf3b3  write      HEAD_DATA = 128
+  sub_f394  0xf3b9  write      HEAD_DATA = 0
+  sub_f394  0xf3bc  write      writes HEAD_DATA (value unknown)
+  sub_f394  0xf3c7  write      HEAD_DATA = 0
+  sub_f394  0xf3c9  write      HEAD_DATA = 0
+  sub_ff61  0xff68  write      writes HEAD_DATA (value unknown)
+  reached from 283 routine(s): beep_long, beep_paper_out, beep_tone, cmd_esc_3, cmd_esc_5, cmd_esc_7, cmd_esc_8, cmd_esc_A, +275 more
+
+; 1 signal(s) never accessed:
+;   EE_ORG (P1.3)
+
+; pointer 0xae -> dme:0x4000  gate array base (mem_00ae:af)
+;   48 access(es): 46 resolved (27 with the space enable not proven), 0 index unknown, 2 to the program space
+;   to the program space at: 0x65ee, 0x8384
+
+; lint: 2 finding(s) comparing the declarations with the firmware:
+;   [unused] EE_ORG (P1.3): never read or written by the firmware
+;   [direction] CR_CMN_HV (P3.0): declared out, but the firmware makes it an input at 0x43b9, 0x4a8c
+
+; 8 leaf routine(s) with fixed signal effects (shown at each call site):
+;   sub_7cf5             -> DME_FUNC = 1; DME: special function
+;   sub_7cf8             -> DME = 1; DME_FUNC = 0; DME: port
+;   sub_ff3d             -> DME_FUNC = 1; DME: special function
+;   sub_ff6e             -> EE_CS = 1 (asserted)   [suggested name: ee_cs_set]
+;   sub_ff71             -> EE_CS = 0 (not asserted)   [suggested name: ee_cs_clear]
+;   sub_ff74             -> EE_DI = 1   [suggested name: ee_di_set]
+;   sub_ff77             -> EE_DI = 0   [suggested name: ee_di_clear]
+;   sub_ff7a             -> EE_SK = 1; EE_SK = 0   [suggested name: ee_sk_pulse]
+
+; routines touching only group eeprom: eeprom_read, sub_77f2, sub_ff6e, sub_ff71, sub_ff74, sub_ff77, sub_ff7a
+; routines touching only group host_if: get_rx_byte, sub_f663
+
+; 'reached from' follows static calls only; 3 computed call/jump site(s) are not followed, so it is a lower bound

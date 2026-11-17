@@ -1,6 +1,10 @@
 
 class Memory(object):
     def __init__(self, rom):
+        # targets the tracer found only through computed jumps / tables;
+        # analyses that reason about a block's predecessors must not assume
+        # they have seen all of them
+        self.computed_targets = set()
         self.contents = bytearray(0x10000 - len(rom)) + bytearray(rom)
         self.instructions = {}
         self.types = {}

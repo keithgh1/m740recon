@@ -1,0 +1,37 @@
+# m740recon --suggest: one pin line per port bit the firmware
+# touches.  Rename each signal, add high=/low= or active=, and
+# change source=guess once a fact is confirmed.
+# device M50734
+
+pin P0.0   P0_0   in    source=guess   # 9 test, 3 read, 1 write
+pin P0.1   P0_1   in    source=guess   # 1 test, 3 read, 1 write
+pin P0.2   P0_2   in    source=guess   # 19 test, 3 read, 1 write
+pin P0.3   P0_3   out   source=guess   # 3 read, 1 write, whole-register only
+pin P0.4   P0_4   out   source=guess   # 2 test, 3 read, 3 set, 3 clear, 1 write
+pin P0.5   P0_5   out   source=guess   # 3 read, 4 set, 1 write
+pin P0.6   P0_6   in    source=guess   # 36 test, 3 read, 1 write
+pin P0.7   P0_7   in    source=guess   # 13 test, 3 read, 1 write
+pin P1.0   P1_0   out   source=guess   # 1 set, 1 clear, 1 write
+pin P1.1   P1_1   out   source=guess   # 1 set, 1 clear, 1 write
+pin P1.2   P1_2   out   source=guess   # 1 set, 1 clear, 1 write
+pin P1.3   P1_3   in    source=guess   # 1 write, whole-register only
+pin P1.4   P1_4   in    source=guess   # 3 test, 1 write
+pin P1.5   P1_5   in    source=guess   # 1 write, whole-register only
+pin P1.6   P1_6   in    source=guess   # 1 write, whole-register only
+pin P1.7   P1_7   in    source=guess   # 1 write, whole-register only
+pin P2.0   P2_0   out   source=guess   # 3 write, whole-register only
+pin P2.1   P2_1   out   source=guess   # 3 write, whole-register only
+pin P2.2   P2_2   out   source=guess   # 3 write, whole-register only
+pin P2.3   P2_3   out   source=guess   # 3 write, whole-register only
+pin P2.4   P2_4   out   source=guess   # 1 clear, 3 write
+pin P2.5   P2_5   out   source=guess   # 1 clear, 3 write
+pin P2.6   P2_6   out   source=guess   # 1 clear, 3 write
+pin P2.7   P2_7   out   source=guess   # 1 clear, 3 write
+pin P3.0   P3_0   bidir source=guess   # 1 read, 2 set, 3 clear, 1 write
+pin P3.1   P3_1   out   source=guess   # 1 read, 4 set, 5 clear, 1 write
+pin P3.2   P3_2   in    source=guess   # 1 read, 1 write, whole-register only
+pin P3.3   P3_3   in    source=guess   # 2 read, 1 write
+pin P3.4   P3_4   in    source=guess   # 2 read, 1 write
+pin P3.5   P3_5   in    source=guess   # 2 read, 1 write
+pin P3.6   P3_6   in    source=guess   # 1 test, 2 read, 1 write
+pin P3.7   P3_7   in    source=guess   # 4 test, 2 read, 1 write

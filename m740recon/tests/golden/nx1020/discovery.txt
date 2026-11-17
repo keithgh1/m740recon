@@ -1,0 +1,42 @@
+; m740recon port discovery (no signals declared)
+; device M50734; ports from device metadata: P0 P1 P2 P3 P4
+; direction: from the firmware's direction-register writes,
+; or inferred from use where marked '?' (set/cleared = likely
+; output, only tested/read = likely input).
+
+P0.0   in     9 test, 3 read, 1 write      sub_4f0f, sub_6b95, reset, cmd_esc_LF, cmd_esc_FF, cmd_esc_j, +5 more
+P0.1   in     1 test, 3 read, 1 write      isr_int2, reset, sub_d0f6, sub_f081, sub_f12d
+P0.2   in     19 test, 3 read, 1 write     sub_4f0f, sub_4f81, sub_6b95, reset, sub_8404, cmd_esc_LF, +11 more
+P0.4   out    2 test, 3 read, 3 set, 3 clear, 1 write sub_42be, isr_int2, beep_tone, sub_7d7f, reset, sub_d0f6, +3 more
+P0.5   out    3 read, 4 set, 1 write       isr_timer123, sub_65de, sub_7cf8, reset, sub_d0f6, sub_f081, +1 more
+P0.6   in     36 test, 3 read, 1 write     sub_4cd1, sub_4e69, sub_6b95, reset, sub_8404, ctl_FF, +13 more
+P0.7   in     13 test, 3 read, 1 write     reset, sub_d0f6, home_seek, sub_f081, sub_f12d
+P1.0   out    1 set, 1 clear, 1 write      reset, sub_ff6e, sub_ff71
+P1.1   out    1 set, 1 clear, 1 write      reset, sub_ff7a
+P1.2   out    1 set, 1 clear, 1 write      reset, sub_ff74, sub_ff77
+P1.4   in     3 test, 1 write              eeprom_read, sub_77f2, reset
+P2.4   out    1 clear, 3 write             isr_tx_cntr_brk, isr_int2, sub_7d7f, reset
+P2.5   out    1 clear, 3 write             isr_tx_cntr_brk, isr_int2, sub_7d7f, reset
+P2.6   out    1 clear, 3 write             isr_tx_cntr_brk, isr_int2, sub_7d7f, reset
+P2.7   out    1 clear, 3 write             isr_tx_cntr_brk, isr_int2, sub_7d7f, reset
+P3.0   bidir  1 read, 2 set, 3 clear, 1 write sub_467b, isr_timer123, sub_7d7f, reset, panel_read
+P3.1   out    1 read, 4 set, 5 clear, 1 write sub_4cd1, isr_int2, sub_7d7f, reset, sub_d6ef, sub_d7e1, +1 more
+P3.3   in     2 read, 1 write              reset, panel_read
+P3.4   in     2 read, 1 write              reset, panel_read
+P3.5   in     2 read, 1 write              reset, panel_read
+P3.6   in     1 test, 2 read, 1 write      sub_4cd1, reset, panel_read
+P3.7   in     4 test, 2 read, 1 write      sub_4cd1, sub_4e69, sub_65de, reset, sub_f394, panel_read
+
+; touched only by whole-register reads/writes:
+P0.3   out    3 read, 1 write              reset, sub_d0f6, sub_f081, sub_f12d
+P1.3   in     1 write                      reset
+P1.5   in     1 write                      reset
+P1.6   in     1 write                      reset
+P1.7   in     1 write                      reset
+P2.0   out    3 write                      isr_int2, sub_7d7f, reset
+P2.1   out    3 write                      isr_int2, sub_7d7f, reset
+P2.2   out    3 write                      isr_int2, sub_7d7f, reset
+P2.3   out    3 write                      isr_int2, sub_7d7f, reset
+P3.2   in     1 read, 1 write              reset, panel_read
+
+; run with --suggest for control-file lines to start from
