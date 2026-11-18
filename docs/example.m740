@@ -150,6 +150,7 @@ range 0xc060 0xc080 addr   # tbl_handlers: 16 pointers into ROM, symbol-substitu
 # control-code keys into mnemonics, so e.g. key 'M' -> cmd_M, key 0x0d -> cmd_CR.
 #
 #   stride=N      bytes per entry            entryoff=K  offset of the 2-byte ptr
-#   terminator=V  stop when entry[0]==V      end=ADDR / count=N  alternative bounds
+#   terminator=V  stop when the key is V     end=ADDR / count=N  alternative bounds
 #   label=PREFIX  name targets PREFIX+key    names=ascii apply ASCII mnemonics
+#   keyoff=K      key byte offset (default 0 when the pointer is not at 0)
 addrtable 0xc0d4 stride=3 entryoff=1 terminator=0x00 label=cmd_ names=ascii

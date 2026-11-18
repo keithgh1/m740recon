@@ -33,8 +33,8 @@ m740recon -c fw.m740 -j > model.json             # JSON model (docs/json_model.m
 m740recon -c fw.m740 -g                          # call graph
 m740recon -c fw.m740 --signals                   # signal report (or port discovery if none declared)
 m740recon --suggest firmware.bin > fw.m740       # draft control file, every line with conf= and a reason
-m740recon -c fw.m740 --suggest                   # only what fw.m740 does not already say
-m740recon -c fw.m740 --suggest=pins              # pin lines only
+m740recon -c fw.m740 --suggest firmware.bin      # only what fw.m740 does not already say
+m740recon -c fw.m740 --suggest=pins firmware.bin # pin lines only
 m740recon -c fw.m740 --signal PE                 # one signal's report section
 m740recon -c fw.m740 --routine main_loop         # one routine's listing (name or 0xADDR)
 m740recon -c fw.m740 --no-annotate               # listing without signal comments
@@ -81,7 +81,7 @@ address, the first directive that names it wins.
 | `label ADDR NAME ["comment"]` | name an address without tracing it |
 | `comment ADDR "text"` | a `;` comment line above ADDR in the listing |
 | `range START END byte\|word\|addr\|text` | type a data region |
-| `addrtable START [stride=N] [entryoff=K] [terminator=V\|end=ADDR\|count=N] [label=PREFIX] [names=ascii]` | decode a table of code pointers |
+| `addrtable START [stride=N] [entryoff=K] [keyoff=K] [terminator=V\|end=ADDR\|count=N] [label=PREFIX] [names=ascii]` | decode a table of code pointers; handlers are named from the key byte at `keyoff` (default: the first byte when the pointer is not) |
 | `pin LOC NAME [in\|out\|bidir] [active=high\|low] [high=TEXT] [low=TEXT] [source=schematic\|firmware\|datasheet\|guess] ["description"]` | a signal on a port pin or bit range |
 | `bit LOC NAME [high=TEXT] [low=TEXT] [source=...] [space=NAME] [access=read\|write] ["description"]` | any other named bit: an SFR control bit, a RAM flag, or a bit of an external register |
 | `pointer ADDR TARGET [space=NAME] ["comment"]` | the zero-page pair at ADDR holds the fixed address TARGET (in address space NAME); indirect accesses through it are attributed |

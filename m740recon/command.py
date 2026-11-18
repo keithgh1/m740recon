@@ -54,11 +54,30 @@ from m740recon.devices import Devices
 from m740recon import control
 
 
+class _AddressSet(object):
+    """Addresses in a list of [start, end) ranges: membership like a range,
+    iteration in address order."""
+
+    def __init__(self, ranges):
+        self.ranges = sorted(ranges)
+        self._mask = bytearray(0x10001)
+        for s, e in self.ranges:
+            self._mask[s:e] = b"\x01" * (e - s)
+
+    def __contains__(self, address):
+        return 0 <= address <= 0x10000 and self._mask[address] == 1
+
+    def __iter__(self):
+        for s, e in self.ranges:
+            for a in range(s, e):
+                yield a
+
+
 def build_disassembly(rom, device, start_address, entry_points=(),
                       vectors_extra=(), data_addrs=(), extra_symbols=(),
                       analyze=False, readonly_ranges=None, word_addrs=(),
                       addr_word_addrs=(), text_ranges=(), discover_tables=False,
-                      proven=True):
+                      proven=True, trace_ranges=None):
     """Trace and symbol-analyze an image; return (memory, symbol_table).
 
     Shared by the CLI and the test harness so both follow the exact same path.
@@ -70,8 +89,15 @@ def build_disassembly(rom, device, start_address, entry_points=(),
     (see dispatch.py) are decoded too, to a fixpoint: each round's new code
     can reveal the next table.  They are recorded on `memory.dispatch_tables`
     and named below any symbol in `extra_symbols`, so user names win.
+
+    `trace_ranges` ([(start, end)]) limits tracing to the bytes that came from
+    files when `rom` is padded (an image below the top of memory, or gaps
+    between files); calls into the padding are not followed.
     """
-    traceable_range = range(start_address, start_address + len(rom) + 1)
+    if trace_ranges is None:
+        traceable_range = range(start_address, start_address + len(rom) + 1)
+    else:
+        traceable_range = _AddressSet(trace_ranges)
     # the device's own vectors that the image does not cover cannot be traced
     # (e.g. a 13-bit part's 0x1ff4 table when the ROM sits higher); extra
     # vectors from a control file must still be inside and are checked later
@@ -108,7 +134,8 @@ def build_disassembly(rom, device, start_address, entry_points=(),
         lo = min(s for s, _ in readonly_ranges)
         hi = max(e for _, e in readonly_ranges)
         used = {sym.name for sym in extra_symbols}
-        for _ in range(8):
+        # terminates: each round must add a table start not seen before
+        while True:
             new = dispatch.find_tables(memory, lo, hi, unsupported,
                                        known=[f.table.start for f in found])
             # only tables inside trusted (ROM) ranges
@@ -251,6 +278,12 @@ def control_args(cf, rom):
     return kwargs
 
 
+def _require_data(path, data):
+    if not data:
+        sys.stderr.write("m740recon: %s is empty.\n" % path)
+        sys.exit(2)
+
+
 def place_binary(rom, header, notices, detection):
     """Choose where a lone binary sits in memory (and which bank of an image
     larger than 64 KiB to use).  Returns (image bytes, base address); exits
@@ -290,6 +323,28 @@ def place_binary(rom, header, notices, detection):
     return rom, base
 
 
+def fit_control_file(cf, size, base, header, detection):
+    """A control file without segments was written against some placement
+    of the binary.  When its entry points and tables lie outside the
+    detected placement but inside the top-of-memory one (where the binary
+    sat before detection existed), use the top of memory."""
+    addrs = list(cf.entry_points) + [t.start for t in cf.addr_tables]
+    top = 0x10000 - size
+
+    def covers(b):
+        return all(b <= a < b + size for a in addrs)
+
+    if not addrs or base == top or covers(base) or not covers(top):
+        return base
+    reason = ("the control file's entry points and tables lie there, not at the "
+              "detected 0x%04x" % base)
+    header[:] = [h for h in header if not h.startswith("base ")]
+    header.append("base    0x%04x   from the control file: %s" % (top, reason))
+    detection["base"] = {"address": "0x%04x" % top, "method": "control",
+                         "confidence": "high", "reason": reason}
+    return top
+
+
 def place_files(paths, header, detection):
     """Place several ROM files, each at its own inferred load address.
     Returns (image bytes from the lowest base, lowest base, placed) where
@@ -300,6 +355,7 @@ def place_files(paths, header, detection):
     for path in paths:
         with open(path, "rb") as f:
             data = f.read()
+        _require_data(path, data)
         off = 0
         if len(data) > 0x10000:
             banks = detect.split_banks(data)
@@ -349,6 +405,17 @@ def choose_device(data, base, default, header, notices, detection):
         header.append("device  %s   default: %s" % (default, guess.reason))
         notices.append("could not detect the device (%s); using %s.  Name the chip "
                        "with -m." % (guess.reason, default))
+        return default
+    if not guess.fits and guess.vector_fit <= 0:
+        # no vector of any layout points at code: the best row is no
+        # evidence, so keep the default rather than let it change decoding.
+        # (A partial fit, e.g. only the reset vector set, still is evidence.)
+        reason = "no device's vectors fit (best %s: %s)" % (guess.device, guess.reason)
+        header.append("device  %s   default: %s" % (default, reason))
+        detection["device"] = {"name": default, "confidence": "low", "reason": reason,
+                               "runner_up": None, "fits": False}
+        notices.append("this does not look like 740 code (%s); using %s.  Name "
+                       "the chip with -m if you know it." % (reason, default))
         return default
     runner = "; runner-up %s" % guess.runner_up if guess.runner_up else ""
     header.append("device  %s   detected (%s): %s%s"
@@ -568,7 +635,11 @@ def main():
         if len(args) == 1:
             with open(args[0], 'rb') as f:
                 rom = bytearray(f.read())
+            _require_data(args[0], rom)
             rom, start_address = place_binary(rom, header, notices, detection)
+            if cf is not None:
+                start_address = fit_control_file(cf, len(rom), start_address,
+                                                 header, detection)
             bank = detection.get("bank")
             placed = [(args[0], start_address, len(rom),
                        int(bank["file_offset"], 16) if bank else 0)]
@@ -594,6 +665,8 @@ def main():
     image_len = (end_address or 0x10000) - start_address
     # what is ROM: control-file file segments, the placed files, or the image
     rom_ranges = kwargs.get("readonly_ranges") or [(start_address, start_address + image_len)]
+    if file_ranges or end_address is not None:
+        kwargs["trace_ranges"] = rom_ranges     # the 0xFF padding is not code
     inferred, dropped = [], {}
     if suggest and suggest_scope == "all":
         advanced = True             # the draft includes code found by evidence
@@ -606,15 +679,23 @@ def main():
         from m740recon import infer
         ro = kwargs.get("readonly_ranges") or [(start_address, start_address + image_len)]
         lo, hi = min(a for a, _ in ro), max(b for _, b in ro)
-        memory, symbol_table, inferred, dropped = infer.run(
-            build_disassembly, rom, selected_device, start_address, lo, hi,
-            analyze=analyze, discover_tables=True, **kwargs)
-        report_inferred(inferred, dropped, header, detection)
-    else:
-        memory, symbol_table = build_disassembly(rom, selected_device,
-                                                 start_address, analyze=analyze,
-                                                 discover_tables=discover_tables,
-                                                 **kwargs)
+    try:
+        if advanced:
+            memory, symbol_table, inferred, dropped = infer.run(
+                build_disassembly, rom, selected_device, start_address, lo, hi,
+                analyze=analyze, discover_tables=True, **kwargs)
+            report_inferred(inferred, dropped, header, detection)
+        else:
+            memory, symbol_table = build_disassembly(rom, selected_device,
+                                                     start_address, analyze=analyze,
+                                                     discover_tables=discover_tables,
+                                                     **kwargs)
+    except ValueError as e:
+        # an entry point or vector outside the traced image
+        sys.stderr.write("m740recon: %s (the image is 0x%04x-0x%04x).  Add a segment "
+                         "line to the control file to place the binary.\n"
+                         % (e, start_address, start_address + image_len - 1))
+        sys.exit(2)
     report_tables(memory, header, detection)
     if not (cf is not None and cf.segments):
         report_unmapped(memory, start_address, start_address + image_len,

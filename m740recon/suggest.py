@@ -26,6 +26,15 @@ def _line(directive, conf, reason, live=True, width=46):
     return "%-*s %s" % (width, text, _conf(conf, reason))
 
 
+def _source(path, off):
+    """A segment SOURCE token for `path`: absolute, since the draft may be
+    saved anywhere, and quoted when the control-file tokenizer needs it."""
+    tok = "%s@0x%x" % (os.path.abspath(path).replace("\\", "/"), off)
+    if any(c.isspace() or c in "#\"'" for c in tok):
+        tok = '"%s"' % tok.replace('"', '\\"')
+    return tok
+
+
 def _clean(t):
     """Text safe inside a control-file comment."""
     return t.replace('"', "'").replace("#", "")
@@ -64,8 +73,8 @@ def build(cf, device, device_given, detection, memory, placed,
         files = detection.get("files") or [detection.get("base", {})]
         for n, ((path, base, size, off), info) in enumerate(zip(placed, files)):
             name = "rom" if len(placed) == 1 else "rom%d" % (n + 1)
-            seg = "segment %s 0x%04x 0x%05x %s@0x%x" % (name, base, base + size,
-                                                    path.replace("\\", "/"), off)
+            seg = "segment %s 0x%04x 0x%05x %s" % (name, base, base + size,
+                                               _source(path, off))
             why = ("load address: %s.  Uncomment to fix the memory map; then run "
                    "without the binary argument" % info.get("reason", ""))
             out.append(_line(seg, info.get("confidence", "medium"), why, live=False))
@@ -84,6 +93,8 @@ def build(cf, device, device_given, detection, memory, placed,
         for f in tables:
             t = f.table
             parts = ["addrtable 0x%04x stride=%d entryoff=%d" % (t.start, t.stride, t.entryoff)]
+            if t.keyoff is not None:
+                parts.append("keyoff=%d" % t.keyoff)
             if t.terminator is not None:
                 parts.append("terminator=0x%02x" % t.terminator)
             if t.count is not None:

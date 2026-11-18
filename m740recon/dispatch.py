@@ -118,17 +118,30 @@ def search_sites(mem, lo, hi):
         if not lo <= a < hi or inst.addr_mode != AddressModes.ZeroPageIndirect:
             continue
         zp = inst.zp_addr
-        vals, called = {}, False
+        # Scanning back from the jump: the pointer must be loaded before the
+        # search call (a load after it makes the pointer a plain code
+        # address), and no branch between the load and the call may skip
+        # the call (that path would jump through the constant unsearched).
+        vals, call_at, ok = {}, None, True
         for j in range(k - 1, max(-1, k - 14), -1):
-            _, prev = insts[j]
+            pa, prev = insts[j]
             m = _LDM.match(str(prev))
             if m and int(m.group(2), 16) in (zp, (zp + 1) & 0xFF):
+                if call_at is None:
+                    ok = False
+                    break
                 vals.setdefault(int(m.group(2), 16), int(m.group(1), 16))
-            if prev.flow_type == FlowTypes.SubroutineCall:
-                called = True
+            if prev.flow_type == FlowTypes.SubroutineCall and call_at is None:
+                call_at = pa
+            elif (call_at is not None and len(vals) < 2
+                  and prev.flow_type == FlowTypes.ConditionalJump
+                  and prev.code_ref_address is not None
+                  and call_at < prev.code_ref_address <= a):
+                ok = False
+                break
             if prev.flow_type in _STOPS:
                 break
-        if called and zp in vals and ((zp + 1) & 0xFF) in vals:
+        if ok and call_at is not None and zp in vals and ((zp + 1) & 0xFF) in vals:
             out.append((a, vals[zp] | (vals[(zp + 1) & 0xFF] << 8)))
     return out
 
@@ -171,8 +184,9 @@ def search_tables(mem, lo, hi, plausible):
             continue
         (stride, koff, poff), (recs, term) = best
         prefix = "tbl_%04x_" % base
-        if koff == 0:
-            table = AddrTable(base, None, None, stride, poff, term, prefix, "ascii")
+        if koff is not None:
+            table = AddrTable(base, None, None, stride, poff, term, prefix, "ascii",
+                              koff or None)
         else:
             table = AddrTable(base, None, len(recs), stride, poff, None, prefix, None)
         found.append(Found(table, "search", site, len(recs)))

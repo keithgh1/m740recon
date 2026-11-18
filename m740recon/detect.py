@@ -69,6 +69,8 @@ def _vote(data):
 
 def _vector_fallback(data):
     n = len(data)
+    if n < 12:
+        return 0                    # too small to hold the six vectors
     base = 0x10000 - n
     good = 0
     for k in range(6):
