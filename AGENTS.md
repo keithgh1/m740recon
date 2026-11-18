@@ -10,7 +10,8 @@ m740recon disassembles firmware for the Mitsubishi/Renesas 740 family of
 8-bit microcontrollers.  Its listing reassembles byte-for-byte with the
 ASxxxx `as740` assembler.  On top of that it can:
 
-- follow computed jumps (`-a`) and decode dispatch tables;
+- follow computed jumps and decode dispatch tables the code proves (always on);
+- find more code by evidence with `-A` / `--advanced` (marked `inferred`);
 - name what is wired to the chip's pins and what RAM flag bits mean, and
   annotate every instruction that touches them;
 - report routines, call edges, signals and lint findings as text or JSON.
@@ -24,14 +25,16 @@ is equivalent.  All output goes to stdout; lint findings and errors go to
 stderr.
 
 ```
-m740recon firmware.bin > out.asm                 # zero setup: top-aligned ROM, default device M3886
+m740recon firmware.bin > out.asm                 # zero setup: load address and device detected (see the listing header)
 m740recon -m M50734 firmware.bin > out.asm       # pick the device
 m740recon -c fw.m740 > out.asm                   # control file (device, memory map, names, signals)
-m740recon -c fw.m740 -a -x > out.asm             # + computed-jump analysis + xref comments
+m740recon -c fw.m740 -A -x > out.asm             # + inferred code (marked) + xref comments
 m740recon -c fw.m740 -j > model.json             # JSON model (docs/json_model.md)
 m740recon -c fw.m740 -g                          # call graph
 m740recon -c fw.m740 --signals                   # signal report (or port discovery if none declared)
-m740recon -c fw.m740 --suggest                   # pin lines for touched, undeclared port bits
+m740recon --suggest firmware.bin > fw.m740       # draft control file, every line with conf= and a reason
+m740recon -c fw.m740 --suggest                   # only what fw.m740 does not already say
+m740recon -c fw.m740 --suggest=pins              # pin lines only
 m740recon -c fw.m740 --signal PE                 # one signal's report section
 m740recon -c fw.m740 --routine main_loop         # one routine's listing (name or 0xADDR)
 m740recon -c fw.m740 --no-annotate               # listing without signal comments
@@ -42,14 +45,18 @@ binary argument is given; otherwise pass the binary after the options.
 
 ## Working loop for a new firmware
 
-1. Run with no configuration and read the output.  Pick the device with
-   `-m` if it is not an M3886.  The listing already names the port bits
-   each instruction touches (`reads P0.1`).
-2. Create a control file with `device`, and `segment` lines if the ROM is
-   not a single image at the top of memory.
+1. Run with no configuration and read the output.  The header names the
+   detected load address and device with a confidence; stderr notes flag a
+   close call or calls into memory no image covers (another ROM).  Name the
+   device with `-m` when you know it.  The listing already names the port
+   bits each instruction touches (`reads P0.1`).
+2. `m740recon --suggest firmware.bin > fw.m740` drafts the control file:
+   device, commented `segment` lines for the memory map, proven dispatch
+   tables, code found by evidence and `pin` lines, each ending with
+   `# conf=WORD  reason`.  Keep `proven`/`high` lines, check `medium` ones,
+   decide on the commented `low` ones.
 3. Run `--signals` with no signals declared: it lists the port bits the
-   firmware touches and their direction.  Run `--suggest` and paste its
-   `pin` lines into the control file.
+   firmware touches and their direction, to check the drafted `pin` lines.
 4. Rename the suggested pins as you learn what they are (schematic,
    datasheet, behavior).  Add `high=` / `low=` or `active=`, and set
    `source=` to where each fact came from.  Add `bit` lines for RAM flags.
@@ -152,7 +159,12 @@ python -m pytest -q
 | `signals.py` | resolved signals (`SignalMap`) |
 | `access.py`, `regflow.py` | instructions to signal accesses; the single source of hardware facts |
 | `effects.py` | leaf-routine effects, call-graph reach, name suggestions |
-| `discover.py` | zero-configuration port discovery and `--suggest` |
+| `discover.py` | zero-configuration port discovery and the `pin` lines of `--suggest` |
+| `detect.py` | load address, banks, device detection, calls into unmapped memory |
+| `dispatch.py` | proven dispatch tables (search-routine and loop-indexed) as `AddrTable`s |
+| `infer.py` | `--advanced`: code by evidence, with sources, confidence and contradiction pruning |
+| `suggest.py` | the `--suggest` draft control file |
+| `annotate.py` | memory map, LCD port, font and text regions for the draft |
 | `lint.py` | declarations versus firmware |
 | `listing.py` | the as740 listing |
 | `report.py` | JSON model, call graph, signal report |

@@ -143,43 +143,7 @@ class ControlFile(object):
           - data_addrs: the non-pointer bytes of each entry, to mark as data.
           - symbols: non-weak Symbols naming the pointer targets (first wins).
         """
-        pointer_addrs = []
-        data_addrs = []
-        syms = {}                       # target addr -> Symbol (first writer wins)
-        used_names = set()              # names already taken (must stay unique)
-        for tbl in self.addr_tables:
-            addr = tbl.start
-            index = 0
-            while addr + tbl.stride <= len(image):
-                # require the whole entry to fit inside [start, end) so the
-                # pointer read below never crosses end into the next region
-                if tbl.end is not None and addr + tbl.stride > tbl.end:
-                    break
-                if tbl.count is not None and index >= tbl.count:
-                    break
-                if tbl.terminator is not None and image[addr] == tbl.terminator:
-                    break
-                ptr = addr + tbl.entryoff
-                target = image[ptr] | (image[ptr + 1] << 8)
-                pointer_addrs.append(ptr)
-                for da in range(addr, addr + tbl.stride):
-                    if da < ptr or da >= ptr + 2:
-                        data_addrs.append(da)
-                if tbl.label_prefix and target not in syms:
-                    # two entries (here or in another table) can map different
-                    # targets to the same token; keep names unique so the
-                    # listing never emits a duplicate label that as740 rejects
-                    name = tbl.label_prefix + _token(tbl, image[addr], index)
-                    unique = name
-                    suffix = 2
-                    while unique in used_names:
-                        unique = "%s_%d" % (name, suffix)
-                        suffix += 1
-                    used_names.add(unique)
-                    syms[target] = Symbol(target, unique, weak=False)
-                addr += tbl.stride
-                index += 1
-        return pointer_addrs, data_addrs, list(syms.values())
+        return resolve_addr_tables(self.addr_tables, image)
 
     @property
     def symbols(self):
@@ -190,6 +154,48 @@ class ControlFile(object):
         # first writer wins, matching the wrapper's setdefault behavior
         if addr not in self._symbols_by_addr:
             self._symbols_by_addr[addr] = Symbol(addr, name, comment, weak=False)
+
+
+def resolve_addr_tables(tables, image, used_names=None):
+    """Expand AddrTable records against `image` (see ControlFile.resolve_tables).
+    `used_names` (a set) keeps names unique across several calls."""
+    pointer_addrs = []
+    data_addrs = []
+    syms = {}                       # target addr -> Symbol (first writer wins)
+    used_names = set() if used_names is None else used_names
+    for tbl in tables:
+        addr = tbl.start
+        index = 0
+        while addr + tbl.stride <= len(image):
+            # require the whole entry to fit inside [start, end) so the
+            # pointer read below never crosses end into the next region
+            if tbl.end is not None and addr + tbl.stride > tbl.end:
+                break
+            if tbl.count is not None and index >= tbl.count:
+                break
+            if tbl.terminator is not None and image[addr] == tbl.terminator:
+                break
+            ptr = addr + tbl.entryoff
+            target = image[ptr] | (image[ptr + 1] << 8)
+            pointer_addrs.append(ptr)
+            for da in range(addr, addr + tbl.stride):
+                if da < ptr or da >= ptr + 2:
+                    data_addrs.append(da)
+            if tbl.label_prefix and target not in syms:
+                # two entries (here or in another table) can map different
+                # targets to the same token; keep names unique so the
+                # listing never emits a duplicate label that as740 rejects
+                name = tbl.label_prefix + _token(tbl, image[addr], index)
+                unique = name
+                suffix = 2
+                while unique in used_names:
+                    unique = "%s_%d" % (name, suffix)
+                    suffix += 1
+                used_names.add(unique)
+                syms[target] = Symbol(target, unique, weak=False)
+            addr += tbl.stride
+            index += 1
+    return pointer_addrs, data_addrs, list(syms.values())
 
 
 def _token(tbl, keybyte, index):

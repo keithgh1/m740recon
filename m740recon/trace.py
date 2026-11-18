@@ -1,3 +1,4 @@
+import heapq
 import os
 from operator import attrgetter
 from m740recon.tables import AddressModes, FlowTypes
@@ -34,6 +35,7 @@ class Tracer(object):
             self.enqueue_vector(address)
 
     def trace(self, disassemble_func):
+        self._decode = disassemble_func
         self._run_queue(disassemble_func)
         if self.analyze:
             # Iterate: a value-propagation pass over the discovered code may
@@ -155,7 +157,10 @@ class Tracer(object):
         """If the jmp/jsr [zp] pointer was loaded from a contiguous [lo,hi]
         table in ROM, enumerate plausible entries and return (ptr_addr, target)
         pairs.  Conservative: every entry must be a readonly, in-range, non-null
-        pointer, and at least two entries must qualify."""
+        pointer, and at least two entries must qualify.  Enumeration stops at
+        the first entry that overlaps already-typed bytes or whose target does
+        not look like the start of code (see _plausible_entry), so it does not
+        run past the end of the table into neighbouring data."""
         zp = inst.zp_addr
         lo_src = regs.zp_src.get(zp)
         hi_src = regs.zp_src.get((zp + 1) & 0xFF)
@@ -171,11 +176,55 @@ class Tracer(object):
             ptr = (base + 2 * i) & 0xFFFF
             if not (self._is_readonly(ptr) and self._is_readonly((ptr + 1) & 0xFFFF)):
                 break
+            if not (self.memory.is_vector_start(ptr) or
+                    self.memory.is_unknown(ptr, 2)):
+                break                   # table cannot overlap code or data
             tgt = self.memory[ptr] | (self.memory[(ptr + 1) & 0xFFFF] << 8)
             if tgt not in self.traceable_range or tgt in (0x0000, 0xFFFF):
                 break
+            if not self._plausible_entry(tgt):
+                break
             entries.append((ptr, tgt))
         return entries if len(entries) >= 2 else []
+
+    _TRIAL_LEN = 64     # instructions decoded when vetting a table target
+    _FILL_LEN = 4       # identical 0x00/0xFF bytes that count as fill
+
+    def _is_fill(self, address):
+        first = self.memory[address]
+        if first not in (0x00, 0xFF):
+            return False
+        for i in range(1, self._FILL_LEN):
+            if self.memory[(address + i) & 0xFFFF] != first:
+                return False
+        return True
+
+    def _plausible_entry(self, target):
+        """True when `target` can start code: it is a known instruction start,
+        or a straight-line trial decode from it reaches a flow stop or known
+        code without hitting fill (erased/blank ROM), an illegal opcode, or
+        the middle of another instruction or data."""
+        decode = getattr(self, "_decode", None)
+        pc = target
+        for _ in range(self._TRIAL_LEN):
+            if self.memory.is_instruction_start(pc):
+                return True
+            if not self.memory.is_unknown(pc) or self._is_fill(pc):
+                return False
+            if decode is None:
+                return True
+            inst = decode(self.memory, pc)
+            if inst.illegal or pc + len(inst) >= len(self.memory):
+                return False
+            if not self.memory.is_unknown(pc, len(inst)):
+                return False
+            if inst.flow_type not in (FlowTypes.Continue,
+                                      FlowTypes.ConditionalJump,
+                                      FlowTypes.SubroutineCall,
+                                      FlowTypes.IndirectSubroutineCall):
+                return True
+            pc = (pc + len(inst)) & 0xFFFF
+        return True
 
     def _resolve_indirect(self, inst, regs):
         """Return the target of an indirect jump/call if statically known."""
@@ -337,43 +386,56 @@ class TraceQueue(object):
 
 
 class SortedSet(object):
-    '''A set-like object where pop() returns items in sorted order'''
+    '''A set-like object where pop() returns items in sorted order.
+
+    A heap of (key, sequence, item) with lazy deletion plus a membership set:
+    add / pop are O(log n) and membership is O(1).  (A sorted list re-sorted
+    on every add with linear membership tests made tracing quadratic.)'''
 
     def __init__(self, items=None, key=None):
-        self.items = []            # for ordered retrieval
-        self.key = key             # key function for sorting
+        self.key = key if key is not None else (lambda item: item)
+        self._heap = []
+        self._members = set()
+        self._seq = 0
         if items is not None:
             for item in items:
                 self.add(item)
 
     def __len__(self):
-        return len(self.items)
+        return len(self._members)
 
     def __contains__(self, item):
-        return item in self.items
+        return item in self._members
 
     def __iter__(self):
-        return iter(self.items)
+        return iter(sorted(self._members, key=self.key))
+
+    @property
+    def items(self):
+        return sorted(self._members, key=self.key)
 
     def __eq__(self, other):
         return sorted(other) == self.items
 
     def add(self, item):
-        if item not in self.items:
-            self.items.append(item)
-            self.items.sort(key=self.key)
+        if item not in self._members:
+            self._members.add(item)
+            self._seq += 1
+            heapq.heappush(self._heap, (self.key(item), self._seq, item))
 
     def remove(self, item):
         try:
-            self.items.remove(item)
-        except ValueError:
+            self._members.remove(item)      # the heap entry is skipped on pop
+        except KeyError:
             raise KeyError(item)
 
     def pop(self):
-        try:
-            return self.items.pop(0)
-        except IndexError:
-            raise KeyError("pop from empty SortedSet")
+        while self._heap:
+            _, _, item = heapq.heappop(self._heap)
+            if item in self._members:
+                self._members.remove(item)
+                return item
+        raise KeyError("pop from empty SortedSet")
 
 
 Unknown = object()

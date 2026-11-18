@@ -45,9 +45,14 @@ def _wrap(text, first_width, width):
 
 class Printer(object):
     def __init__(self, memory, start_address, symbol_table, comments=None,
-                 show_xrefs=False, annotations=None):
+                 show_xrefs=False, annotations=None, end_address=None,
+                 header=None):
         self.memory = memory
         self.start_address = start_address
+        # end of the listed image (exclusive); an image placed below the top
+        # of memory stops here instead of listing the padding above it
+        self.end_address = end_address if end_address is not None else len(memory)
+        self.header = header or []            # comment lines before .area
         self.symbol_table = symbol_table
         self.comments = comments or {}        # addr -> user comment text
         self.show_xrefs = show_xrefs
@@ -60,7 +65,7 @@ class Printer(object):
             self.xrefs = self._compute_xrefs()
         self.print_header()
         self.print_symbols()
-        self._print_body(self.start_address, len(self.memory))
+        self._print_body(self.start_address, self.end_address)
 
     def print_region(self, start, end):
         """Print the listing body for [start, end) only: no header and no
@@ -68,7 +73,7 @@ class Printer(object):
         if self.show_xrefs:
             self.xrefs = self._compute_xrefs()
         self.last_line_type = None
-        self._print_body(start, min(end, len(self.memory)))
+        self._print_body(start, min(end, self.end_address))
 
     def _print_body(self, address, end):
         while address < end:
@@ -101,6 +106,10 @@ class Printer(object):
                     raise NotImplementedError(msg) # always a bug
 
     def print_header(self):
+        for line in self.header:
+            print('; ' + line if line else ';')
+        if self.header:
+            print()
         print('    .area CODE1 (ABS)')
         print('    .org 0x%04x\n' % self.start_address)
 
@@ -114,7 +123,8 @@ class Printer(object):
         Emitting a direct-page address as a body label would therefore grow
         every zero-page instruction by one byte and shift all following code.
         """
-        return address < self.start_address or address < 0x100
+        return (address < self.start_address or address < 0x100
+                or address >= self.end_address)
 
     def print_symbols(self):
         used_symbols = set()

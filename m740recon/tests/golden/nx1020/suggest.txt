@@ -1,8 +1,100 @@
-# m740recon --suggest: one pin line per port bit the firmware
-# touches.  Rename each signal, add high=/low= or active=, and
-# change source=guess once a fact is confirmed.
-# device M50734
+# m740recon --suggest: a draft control file built from what the firmware
+# shows.  Each line ends with how sure m740recon is and why; lines with
+# conf=low are commented out.  Keep, rename or delete lines, then run
+#   m740recon -c THIS_FILE
 
+# code found by evidence, not proof (--advanced)
+entry 0x77d1                                   # conf=medium  follows the routine end at 0x77d0; calls 15 known routines
+entry 0x7889                                   # conf=medium  follows the routine end at 0x7888; calls 5 known routines
+entry 0xe98e                                   # conf=medium  follows the routine end at 0xe98d; calls 2 known routines
+entry 0xe9c9                                   # conf=medium  follows the routine end at 0xe9c8; calls 2 known routines
+entry 0xed5b                                   # conf=medium  follows the routine end at 0xed5a; calls 3 known routines
+entry 0xed6d                                   # conf=medium  follows the routine end at 0xed6a; calls 2 known routines
+
+# memory the code uses outside this image
+#   ram  0x0100-0x01ff  read and written: RAM
+#   in   0x0200-0x02ff  only read: an input or a peripheral
+#   out  0x0300-0x03ff  only written: an output or a peripheral
+#   ram  0x0400-0x04ff  read and written: RAM
+#   out  0x0500-0x08ff  only written: an output or a peripheral
+#   out  0x1600-0x16ff  only written: an output or a peripheral
+#   out  0x2500-0x25ff  only written: an output or a peripheral
+
+# data: fonts and text (no traced code inside)
+range 0x6bdd 0x6be9 text                       # conf=medium  text: 'EDS SETTINGS'
+range 0x6beb 0x6c0c text                       # conf=medium  text: '( Current settings : Emphasized )'
+range 0x6c0d 0x6c23 text                       # conf=medium  text: ' Bank:Switch: Function'
+range 0x6c28 0x6c2e text                       # conf=medium  text: 'Set ON'
+range 0x6c30 0x6c3a text                       # conf=medium  text: ':  Set OFF'
+range 0x6c7f 0x6c96 text                       # conf=medium  text: '  A  :  1   : Emulation'
+range 0x6c9e 0x6ca7 text                       # conf=medium  text: ''STANDARD'
+range 0x6cae 0x6cc5 text                       # conf=medium  text: '  A  :  2   : RAM Usage'
+range 0x6ccd 0x6cda text                       # conf=medium  text: ''Input Buffer'
+range 0x6cdc 0x6ce5 text                       # conf=medium  text: '2Download'
+range 0x6ce6 0x6cfb text                       # conf=medium  text: '  A  :  3   : Auto-LF'
+range 0x6d03 0x6d0c text                       # conf=medium  text: ''Disabled'
+range 0x6d0e 0x6d16 text                       # conf=medium  text: '2Enabled'
+range 0x6d17 0x6d30 text                       # conf=medium  text: '  A  :  4   : ASF Setting'
+range 0x6d38 0x6d41 text                       # conf=medium  text: ''Disabled'
+range 0x6d43 0x6d4b text                       # conf=medium  text: '2Enabled'
+range 0x6d4c 0x6d6d text                       # conf=medium  text: '  B  :  1   : Multi-part mode   :'
+range 0x6d72 0x6d7b text                       # conf=medium  text: ''Disabled'
+range 0x6d7d 0x6d85 text                       # conf=medium  text: '2Enabled'
+range 0x6d86 0x6da7 text                       # conf=medium  text: '  B  :  2   : Paper-out Detector:'
+range 0x6dac 0x6db5 text                       # conf=medium  text: ''Enabled '
+range 0x6db7 0x6dc0 text                       # conf=medium  text: '2Disabled'
+range 0x6dc1 0x6dd7 text                       # conf=medium  text: '  B  :  3   : Tear off'
+range 0x6ddf 0x6de8 text                       # conf=medium  text: ''Disabled'
+range 0x6dea 0x6df2 text                       # conf=medium  text: '2Enabled'
+range 0x6df3 0x6e0b text                       # conf=medium  text: '  B  :  4   : (Reserved)'
+range 0x6e10 0x6e19 text                       # conf=medium  text: ''Leave ON'
+range 0x6e24 0x6e3c text                       # conf=medium  text: '  C  : 1,2  : Print Mode'
+range 0x6e4b 0x6e57 text                       # conf=medium  text: ''10cpi Draft'
+range 0x6e61 0x6e70 text                       # conf=medium  text: ''10cpi HS-Draft'
+range 0x6e72 0x6e79 text                       # conf=medium  text: 'ON  OFF'
+range 0x6e7b 0x6e87 text                       # conf=medium  text: ''17cpi Draft'
+range 0x6e89 0x6e8f text                       # conf=medium  text: 'OFF ON'
+range 0x6e91 0x6e9f text                       # conf=medium  text: ''10cpi COURIER'
+range 0x6ea1 0x6ea8 text                       # conf=medium  text: 'OFF OFF'
+range 0x6ea9 0x6ec2 text                       # conf=medium  text: '  C  : 3,4  : Page Length'
+range 0x6ed8 0x6ee4 text                       # conf=medium  text: '38'   OFF ON'
+range 0x6ef3 0x6f00 text                       # conf=medium  text: ''A4   ON  OFF'
+range 0x6f02 0x6f10 text                       # conf=medium  text: '212'   OFF OFF'
+range 0x6f11 0x6f33 text                       # conf=medium  text: '  D  :  1   : Character Table (CT)'
+range 0x6f3f 0x6f4c text                       # conf=medium  text: 'STD   mode  :'
+range 0x6f51 0x6f5a text                       # conf=medium  text: ''Graphics'
+range 0x6f5c 0x6f64 text                       # conf=medium  text: '2Italics'
+range 0x6f6d 0x6f7a text                       # conf=medium  text: 'IBM   mode  :'
+range 0x6f88 0x6f8f text                       # conf=medium  text: '2IBM 1'
+range 0x6fd9 0x7004 text                       # conf=medium  text: ': International Character Set  (CT=Itali'
+range 0x7026 0x703c text                       # conf=medium  text: '+Denmark-1 ON  ON  OFF'
+range 0x703f 0x7052 text                       # conf=medium  text: 'France   OFF ON  ON'
+range 0x7054 0x706a text                       # conf=medium  text: '+Sweden    OFF ON  OFF'
+range 0x706d 0x7080 text                       # conf=medium  text: 'Germany  ON  OFF ON'
+range 0x7082 0x7098 text                       # conf=medium  text: '+Italy     ON  OFF OFF'
+range 0x709b 0x70ae text                       # conf=medium  text: 'England  OFF OFF ON'
+range 0x70b0 0x70c6 text                       # conf=medium  text: '+Spain-1   OFF OFF OFF'
+range 0x7104 0x711f text                       # conf=medium  text: '  D  : 2,3,4: IBM Code Page'
+range 0x7121 0x713a text                       # conf=medium  text: '(CT=IBM 1, 2, Graphics)'
+range 0x7152 0x7168 text                       # conf=medium  text: '+863      ON  ON  OFF'
+range 0x716b 0x717e text                       # conf=medium  text: '850     OFF ON  ON'
+range 0x7180 0x7196 text                       # conf=medium  text: '+865      OFF ON  OFF'
+range 0x7199 0x71ac text                       # conf=medium  text: '860     ON  OFF ON'
+range 0x71ae 0x71c4 text                       # conf=medium  text: '+Reserved  ON  OFF OFF'
+range 0x71c7 0x71da text                       # conf=medium  text: '861     OFF OFF ON'
+range 0x71dc 0x71f2 text                       # conf=medium  text: '+Reserved  OFF OFF OFF'
+range 0x7458 0x747d text                       # conf=medium  text: '0123456789*** This is first line. ***'
+range 0x749a 0x74ac text                       # conf=medium  text: '*** This is line  '
+range 0xbf37 0xbf4d text                       # conf=medium  text: 'BI-DIRECTIONAL SETTING'
+range 0xbf4e 0xbf59 text                       # conf=medium  text: ' CURRENT : '
+range 0xbfb3 0xbfdf text                       # conf=medium  text: 'CURRENT ELECTRONIC DIP SWITCH (EDS) SETT'
+range 0xbfe0 0xc00c text                       # conf=medium  text: ' Switch 1 2 3 4  1 2 3 4  1 2 3 4  1 2 3'
+range 0xc63f 0xc65d text                       # conf=medium  text: '*** DOT ADJUSTMENT SETTING ***'
+range 0xc6db 0xc6e4 text                       # conf=medium  text: 'CURRENT  '
+range 0xc6e5 0xc71b text                       # conf=medium  text: 'UNI +8 +7 +6 +5 +4 +3 +2 +1  0 -1 -2 -3 '
+
+# port bits the firmware touches: rename each signal, add high=/low= or
+# active=, and change source=guess once a fact is confirmed
 pin P0.0   P0_0   in    source=guess   # 9 test, 3 read
 pin P0.1   P0_1   in    source=guess   # 1 test, 3 read
 pin P0.2   P0_2   in    source=guess   # 19 test, 3 read

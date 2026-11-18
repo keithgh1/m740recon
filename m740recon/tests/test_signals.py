@@ -31,6 +31,18 @@ def _produce(annotate=True):
                                 control=cf, annotate=annotate)
 
 
+def _strip_header(listing):
+    """Drop the detection header (leading ';' lines and the blank after them)
+    that the CLI puts above `.area`; the header has tests of its own."""
+    lines = listing.splitlines(True)
+    i = 0
+    while i < len(lines) and lines[i].startswith(";"):
+        i += 1
+    if i and i < len(lines) and not lines[i].strip():
+        i += 1
+    return "".join(lines[i:])
+
+
 def _line(listing, address):
     tag = ";%04x  " % address
     found = [l for l in listing.splitlines() if tag in l]
@@ -280,7 +292,7 @@ class CliTests(unittest.TestCase):
             command.main()
         finally:
             sys.stdout, sys.argv = old_out, old_argv
-        return buf.getvalue()
+        return _strip_header(buf.getvalue())
 
     def test_cli_annotates_by_default(self):
         self.assertIn("PE: branch if paper present", self._run())

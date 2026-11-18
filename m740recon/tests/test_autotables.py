@@ -26,7 +26,44 @@ def _image():
     return bytes(rom)
 
 
+def _image_fill_entry():
+    """Like _image, but the third table slot points at erased (0xFF) ROM
+    instead of ending with a null pointer."""
+    rom = bytearray(_image())
+    rom[0x8104:0x8106] = bytes([0x00, 0xA0])         # -> 0xA000 (fill)
+    rom[0xA000:0xA040] = b"\xff" * 0x40
+    return bytes(rom)
+
+
+def _image_code_after_table():
+    """The table is followed directly by code reached from another vector.
+    That code's first bytes (jsr 0x92a0 = 20 a0 92) read as a pointer to an
+    otherwise unreachable routine at 0xa020, which must not be traced."""
+    rom = bytearray(_image())
+    rom[0x8104:0x8108] = bytes([0x20, 0xA0, 0x92,    # jsr 0x92a0
+                                0x40])               # rti
+    rom[0x92A0] = 0x60                               # rts
+    rom[0xA020:0xA023] = bytes([0xA9, 0x07, 0x60])   # lda #0x07 ; rts
+    rom[0xFFFC], rom[0xFFFD] = 0x04, 0x81            # vector -> 0x8104
+    return bytes(rom)
+
+
 class AutoTableTests(unittest.TestCase):
+    def test_table_stops_at_entry_into_fill(self):
+        text = asmchain.disasm_text(_image_fill_entry(), "M50734", 0,
+                                    discover_tables=True)
+        self.assertIn("lda #0x01", text)
+        self.assertIn("lda #0x02", text)
+        self.assertNotIn(";a000  ff ff", text)      # fill left as data
+
+    def test_table_stops_at_following_code(self):
+        text = asmchain.disasm_text(_image_code_after_table(), "M50734", 0,
+                                    discover_tables=True)
+        self.assertIn("lda #0x01", text)
+        self.assertIn("lda #0x02", text)
+        self.assertIn(";8104  20 a0 92", text)      # decoded as code
+        self.assertNotIn("lda #0x07", text)
+
     def test_handlers_not_found_with_plain_analyze(self):
         # value tracking alone can't resolve a table-indexed jmp [zp]
         text = asmchain.disasm_text(_image(), "M50734", 0, analyze=True)

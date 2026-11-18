@@ -22,6 +22,7 @@ existed.
 | `groups` | array | *signals*: `name`, `description`, `members` (signal names) |
 | `lint` | array | *signals*: `rule`, `text` for each lint finding |
 | `pointers` | array | present when the control file declares a `pointer`; see below |
+| `detection` | object | present when m740recon inferred anything (no `-m`, a lone binary, proven tables, `--advanced`); see below |
 
 ## `meta`
 
@@ -99,3 +100,21 @@ the addresses from its entry up to the next routine's entry.
 | `index` | the possible values of the index register, or null |
 | `index_register` | `Y` for `[zp],y`; `X` for `[zp,x]`, where X selects the pointer |
 | `text` | the bracketed tag the listing shows, e.g. `dme:0x4002\|0x4003 Y=2,3` |
+
+## `detection`
+
+Only the keys for what was actually inferred are present.  Addresses are hex strings.
+
+| Key | Content |
+|---|---|
+| `base` | `address`, `method` (`vote`, `vectors`, `fills`, `assumed`), `confidence`, `reason` |
+| `files` | several binaries: per file `path`, `base`, `size`, `confidence`, `reason` |
+| `bank` | a file over 64 KiB: `file_offset` and `size` of the bank used |
+| `device` | `name`, `confidence`, `reason`, `runner_up`, `fits` (false: does not look like 740 code) |
+| `tables` | proven dispatch tables: `address`, `records`, `stride`, `pointer_offset`, `proof`, `site` |
+| `unmapped` | calls into memory no file covers: `from`, `to`, `references` |
+| `inferred` | `--advanced`: `address`, `source` (`gap` or `table@ADDR`), `confidence`, `reason` |
+| `dropped` | `--advanced`: `address`, `reasons` for entries removed as contradictory |
+| `annotations` | `--advanced`: `memory` (`from`, `to`, `kind`), `lcd`, `fonts`, `text` |
+
+Confidence words: `proven`, `high`, `medium`, `low` (see [Detection and inference](detection.md)).
