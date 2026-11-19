@@ -210,6 +210,46 @@ class ControlPlacementTests(unittest.TestCase):
         self.assertNotIn("Traceback", err)
 
 
+class ControlTableImageTests(unittest.TestCase):
+    TABLE = "addrtable 0x%04x stride=3 entryoff=1 terminator=0x00 label=t_\n"
+
+    def _image(self, base, size):
+        """`size` bytes loaded at `base`: rts at base, a table at base+0x100
+        keyed A -> base+0x200, a handler there, reset at the top."""
+        rom = bytearray(b"\xff" * size)
+        rom[0] = 0x60
+        h = base + 0x200
+        rom[0x100:0x104] = bytes([0x41, h & 0xFF, h >> 8, 0x00])
+        rom[0x200:0x203] = bytes([0xA9, 1, 0x60])
+        rom[size - 2], rom[size - 1] = base & 0xFF, base >> 8
+        return bytes(rom)
+
+    def test_small_image_at_the_top(self):
+        data = self._image(0xF000, 0x1000)
+        code, out, err = _cli_with_control(self.TABLE % 0xF100, data)
+        self.assertEqual(code, 0, err)
+        self.assertIn("t_A:", out)
+
+    def test_args_use_absolute_addresses_at_a_low_base(self):
+        data = self._image(0x2000, 0x1000)
+        kwargs = command.control_args(control.parse(self.TABLE % 0x2100), data, 0x2000)
+        self.assertEqual(kwargs["vectors_extra"], [0x2101])
+        self.assertEqual([s.name for s in kwargs["extra_symbols"] if s.address == 0x2200], ["t_A"])
+
+    def test_table_outside_the_image_is_an_error(self):
+        data = self._image(0xF000, 0x1000)
+        code, out, err = _cli_with_control(self.TABLE % 0x8000, data)
+        self.assertEqual(code, 2)
+        self.assertIn("outside the image", err)
+
+    def test_table_stops_at_the_end_of_the_image(self):
+        data = bytearray(self._image(0x2000, 0x1000))
+        data[0xFFB:0xFFF] = bytes([0x41, 0x00, 0x22, 0x41])  # unterminated at the end
+        cf = control.parse(self.TABLE % 0x2FFB)
+        kwargs = command.control_args(cf, bytes(data), 0x2000)
+        self.assertEqual(kwargs["vectors_extra"], [0x2FFC])
+
+
 def _cli_with_control(text, data):
     import io
     import shutil

@@ -241,13 +241,20 @@ def control_comments(cf):
     return comments
 
 
-def control_args(cf, rom):
+def control_args(cf, rom, base=0):
     """Translate a ControlFile into build_disassembly keyword arguments.
+    `rom` is the image as loaded at `base`.
 
     Symbol precedence (later overrides earlier in SymbolTable): device symbols,
     then addrtable-generated names, then explicit `label`/`entry` names.
     """
-    pointer_addrs, data_addrs, table_symbols = cf.resolve_tables(rom)
+    image = rom
+    if base or len(rom) < 0x10000:
+        # tables name absolute addresses
+        image = bytearray(b"\xff" * 0x10000)
+        image[base:base + len(rom)] = rom
+    pointer_addrs, data_addrs, table_symbols = cf.resolve_tables(
+        image, base, min(base + len(rom), 0x10000))
     word_addrs, addr_word_addrs, text_ranges = [], [], []
     for start, end, kind in cf.ranges:
         if kind == "byte":
@@ -654,7 +661,13 @@ def main():
         selected_device = choose_device(detect_data, detect_base, selected_device,
                                         header, notices, detection)
 
-    kwargs = control_args(cf, rom) if cf is not None else {}
+    kwargs = {}
+    if cf is not None:
+        try:
+            kwargs = control_args(cf, rom, start_address)
+        except control.ControlError as e:
+            sys.stderr.write("Control file error: %s\n" % e)
+            sys.exit(2)
     if file_ranges:
         kwargs.setdefault("readonly_ranges", file_ranges)   # gaps are not ROM
     if end_address is not None:

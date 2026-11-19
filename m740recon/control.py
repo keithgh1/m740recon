@@ -145,8 +145,9 @@ class ControlFile(object):
             image[seg.start:seg.end] = chunk
         return image
 
-    def resolve_tables(self, image):
-        """Expand every addrtable against `image`.
+    def resolve_tables(self, image, lo=0, hi=None):
+        """Expand every addrtable against `image`, indexed by absolute address.
+        Only [lo, hi) holds real bytes; a table outside it is an error.
 
         Returns (pointer_addrs, data_addrs, symbols):
           - pointer_addrs: addresses of 2-byte code pointers, to be treated as
@@ -156,7 +157,12 @@ class ControlFile(object):
         """
         # generated names must not repeat a name the file gives elsewhere
         used = {sym.name for sym in self._symbols_by_addr.values()}
-        return resolve_addr_tables(self.addr_tables, image, used)
+        hi = len(image) if hi is None else hi
+        for tbl in self.addr_tables:
+            if not lo <= tbl.start < hi:
+                raise ControlError("addrtable 0x%04x is outside the image "
+                                   "(0x%04x-0x%04x)" % (tbl.start, lo, hi - 1))
+        return resolve_addr_tables(self.addr_tables, image, used, hi)
 
     @property
     def symbols(self):
@@ -169,17 +175,19 @@ class ControlFile(object):
             self._symbols_by_addr[addr] = Symbol(addr, name, comment, weak=False)
 
 
-def resolve_addr_tables(tables, image, used_names=None):
+def resolve_addr_tables(tables, image, used_names=None, limit=None):
     """Expand AddrTable records against `image` (see ControlFile.resolve_tables).
-    `used_names` (a set) keeps names unique across several calls."""
+    `used_names` (a set) keeps names unique across several calls; no entry
+    reaches `limit` (default: the end of `image`)."""
     pointer_addrs = []
     data_addrs = []
     syms = {}                       # target addr -> Symbol (first writer wins)
     used_names = set() if used_names is None else used_names
+    limit = len(image) if limit is None else limit
     for tbl in tables:
         addr = tbl.start
         index = 0
-        while addr + tbl.stride <= len(image):
+        while addr + tbl.stride <= limit:
             # require the whole entry to fit inside [start, end) so the
             # pointer read below never crosses end into the next region
             if tbl.end is not None and addr + tbl.stride > tbl.end:
