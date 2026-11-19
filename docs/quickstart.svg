@@ -1,112 +1,58 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 500" width="960" height="500" role="img" aria-labelledby="t d">
-  <title id="t">m740recon quick start</title>
-  <desc id="d">Four steps: optionally bring an AI agent, run m740recon on the ROM naming the chip with -m, describe the board in a control file using the datasheet, schematic and the firmware itself, then run with the control file. Lint findings loop back to the control file.</desc>
-  <defs>
-    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-      <path d="M0,0 L10,5 L0,10 z" fill="#57606a"/>
-    </marker>
-    <marker id="arrowG" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-      <path d="M0,0 L10,5 L0,10 z" fill="#1a7f37"/>
-    </marker>
-    <style>
-      text { font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: #1f2328; }
-      .h { font-size: 18px; font-weight: 700; }
-      .b { font-size: 13px; fill: #424a53; }
-      .s { font-size: 12px; fill: #57606a; }
-      .tag { font-size: 10px; font-weight: 700; letter-spacing: 1px; fill: #8250df; }
-      .code { font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace; font-size: 13px; fill: #0550ae; }
-      .num { font-size: 15px; font-weight: 700; fill: #ffffff; }
-      .src { font-size: 13px; font-weight: 700; }
-      .loop { font-size: 12px; font-style: italic; fill: #1a7f37; }
-    </style>
-  </defs>
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="700" viewBox="0 0 900 700" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+  <style>
+    .h    { font-size: 30px; font-weight: 700; fill: #1f2328; }
+    .b    { font-size: 20px; fill: #1f2328; }
+    .s    { font-size: 17px; fill: #59636e; }
+    .tip  { font-size: 18px; fill: #1f2328; }
+    .code { font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace; font-size: 19px; fill: #1f2328; }
+    .flag { font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace; font-size: 18px; font-weight: 700; fill: #0969da; }
+    .num  { font-size: 28px; font-weight: 700; fill: #ffffff; }
+  </style>
 
-  <!-- canvas: a light card so it reads the same in light and dark themes -->
-  <rect x="1" y="1" width="958" height="498" rx="14" fill="#ffffff" stroke="#d0d7de" stroke-width="2"/>
+  <rect x="0" y="0" width="900" height="700" fill="#ffffff"/>
 
-  <!-- loop: lint feeds back into the control file -->
-  <path d="M832,92 C832,40 597,40 597,86" fill="none" stroke="#1a7f37" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#arrowG)"/>
-  <text x="715" y="36" text-anchor="middle" class="loop">lint shows what to fix next, repeat</text>
+  <!-- AI tip -->
+  <rect x="2" y="2" width="896" height="46" rx="10" fill="#ddf4ff"/>
+  <text x="22" y="32" class="tip">Tip: point Claude Code or another AI agent at this repository; <tspan font-weight="700">AGENTS.md</tspan> tells it what to do.</text>
 
-  <!-- step cards -->
-  <!-- 1 optional -->
-  <rect x="25" y="92" width="205" height="170" rx="10" fill="#fbf8ff" stroke="#8250df" stroke-width="2" stroke-dasharray="7 5"/>
-  <circle cx="52" cy="120" r="15" fill="#8250df"/>
-  <text x="52" y="125" text-anchor="middle" class="num">1</text>
-  <text x="76" y="116" class="tag">OPTIONAL</text>
-  <text x="76" y="134" class="h">Bring a helper</text>
-  <text x="42" y="168" class="b">Point Claude or another AI</text>
-  <text x="42" y="186" class="b">agent at this repository.</text>
-  <text x="42" y="212" class="b">It starts from</text>
-  <rect x="40" y="220" width="86" height="22" rx="4" fill="#eff2f5"/>
-  <text x="48" y="236" class="code">AGENTS.md</text>
+  <!-- card 1 -->
+  <rect x="2" y="66" width="896" height="182" rx="16" fill="#ffffff" stroke="#0969da" stroke-width="3"/>
+  <circle cx="46" cy="110" r="24" fill="#0969da"/>
+  <text x="46" y="120" text-anchor="middle" class="num">1</text>
+  <text x="84" y="121" class="h">Just run it</text>
+  <rect x="24" y="150" width="470" height="44" rx="8" fill="#eff2f5"/>
+  <text x="40" y="179" class="code">m740recon rom.bin &gt; rom.asm</text>
+  <text x="524" y="112" class="b">Detects the chip, load address</text>
+  <text x="524" y="140" class="b">and dispatch tables for you.</text>
+  <text x="524" y="170" class="s">The listing reassembles byte-exact.</text>
+  <text x="524" y="214" class="b">Wrong chip?</text>
+  <text x="652" y="214" class="flag">-m M50734</text>
 
-  <!-- 2 -->
-  <rect x="260" y="92" width="205" height="170" rx="10" fill="#f6f8fa" stroke="#0969da" stroke-width="2"/>
-  <circle cx="287" cy="120" r="15" fill="#0969da"/>
-  <text x="287" y="125" text-anchor="middle" class="num">2</text>
-  <text x="311" y="126" class="h">Run it</text>
-  <rect x="266" y="150" width="194" height="24" rx="4" fill="#eff2f5"/>
-  <text x="272" y="167" class="code">m740recon <tspan style="font-weight:700;fill:#cf222e">-m CHIP</tspan> rom.bin</text>
-  <text x="277" y="196" class="b">Full listing with registers,</text>
-  <text x="277" y="214" class="b">routines and port bits</text>
-  <text x="277" y="232" class="b">named. No setup.</text>
-  <text x="277" y="252" class="s" style="fill:#cf222e">CHIP = chip name, e.g. M50734</text>
+  <!-- card 2 -->
+  <rect x="2" y="266" width="896" height="182" rx="16" fill="#ffffff" stroke="#8250df" stroke-width="3"/>
+  <circle cx="46" cy="310" r="24" fill="#8250df"/>
+  <text x="46" y="320" text-anchor="middle" class="num">2</text>
+  <text x="84" y="321" class="h">Let it find more</text>
+  <rect x="24" y="350" width="470" height="44" rx="8" fill="#eff2f5"/>
+  <text x="40" y="379" class="code">m740recon --suggest rom.bin &gt; fw.m740</text>
+  <text x="524" y="312" class="b">Finds more code and drafts a</text>
+  <text x="524" y="340" class="b">control file from what it found.</text>
+  <text x="524" y="370" class="s">Each line says how sure it is, and why.</text>
+  <text x="524" y="414" class="b">Just more code?</text>
+  <text x="694" y="414" class="flag">-A</text>
 
-  <!-- 3 -->
-  <rect x="495" y="92" width="205" height="170" rx="10" fill="#f6f8fa" stroke="#0969da" stroke-width="2"/>
-  <circle cx="522" cy="120" r="15" fill="#0969da"/>
-  <text x="522" y="125" text-anchor="middle" class="num">3</text>
-  <text x="546" y="126" class="h">Describe it</text>
-  <rect x="510" y="150" width="80" height="24" rx="4" fill="#eff2f5"/>
-  <text x="518" y="167" class="code">fw.m740</text>
-  <text x="512" y="196" class="b">A control file: device,</text>
-  <text x="512" y="214" class="b">memory map, names,</text>
-  <text x="512" y="232" class="b">pins, flags and</text>
-  <text x="512" y="250" class="b">external registers.</text>
+  <!-- card 3 -->
+  <rect x="2" y="466" width="896" height="182" rx="16" fill="#ffffff" stroke="#1a7f37" stroke-width="3"/>
+  <circle cx="46" cy="510" r="24" fill="#1a7f37"/>
+  <text x="46" y="520" text-anchor="middle" class="num">3</text>
+  <text x="84" y="521" class="h">Make it yours</text>
+  <rect x="24" y="550" width="470" height="44" rx="8" fill="#eff2f5"/>
+  <text x="40" y="579" class="code">m740recon -c fw.m740 rom.bin</text>
+  <text x="524" y="512" class="b">Edit the draft: your names,</text>
+  <text x="524" y="540" class="b">your pins, your hardware.</text>
+  <text x="524" y="570" class="s">Lint shows where the file and the</text>
+  <text x="524" y="594" class="s">firmware disagree.</text>
 
-  <!-- 4 -->
-  <rect x="730" y="92" width="205" height="170" rx="10" fill="#f6f8fa" stroke="#0969da" stroke-width="2"/>
-  <circle cx="757" cy="120" r="15" fill="#0969da"/>
-  <text x="757" y="125" text-anchor="middle" class="num">4</text>
-  <text x="781" y="126" class="h">Run with it</text>
-  <rect x="745" y="150" width="175" height="24" rx="4" fill="#eff2f5"/>
-  <text x="753" y="167" class="code">m740recon -c fw.m740</text>
-  <text x="747" y="196" class="b">Listing in your names,</text>
-  <text x="747" y="214" class="b">signal report, JSON model,</text>
-  <text x="747" y="232" class="b">and lint where the file</text>
-  <text x="747" y="250" class="b">and firmware disagree.</text>
-
-  <!-- arrows between steps -->
-  <line x1="232" y1="177" x2="256" y2="177" stroke="#57606a" stroke-width="2" marker-end="url(#arrow)"/>
-  <line x1="467" y1="177" x2="491" y2="177" stroke="#57606a" stroke-width="2" marker-end="url(#arrow)"/>
-  <line x1="702" y1="177" x2="726" y2="177" stroke="#57606a" stroke-width="2" marker-end="url(#arrow)"/>
-
-  <!-- step 2 exit: enough? done -->
-  <line x1="362" y1="264" x2="362" y2="300" stroke="#57606a" stroke-width="2" marker-end="url(#arrow)"/>
-  <rect x="277" y="304" width="170" height="34" rx="17" fill="#dafbe1" stroke="#1a7f37" stroke-width="1.5"/>
-  <text x="362" y="326" text-anchor="middle" class="b" style="fill:#1a7f37;font-weight:700">Enough? You're done.</text>
-  <text x="362" y="360" text-anchor="middle" class="s">Want names and meanings?</text>
-  <text x="362" y="376" text-anchor="middle" class="s">Go on to step 3.</text>
-
-  <!-- where the control file's facts come from -->
-  <text x="707" y="482" text-anchor="middle" class="s" style="font-weight:700;letter-spacing:1px">WHERE THE CONTROL FILE'S FACTS COME FROM</text>
-  <path d="M543,386 C543,330 570,300 580,266" fill="none" stroke="#57606a" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <path d="M707,386 C707,330 640,300 614,266" fill="none" stroke="#57606a" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <path d="M871,386 C871,320 700,290 640,262" fill="none" stroke="#57606a" stroke-width="1.5" marker-end="url(#arrow)"/>
-
-  <rect x="470" y="388" width="146" height="66" rx="8" fill="#fff8c5" stroke="#9a6700" stroke-width="1.5"/>
-  <text x="543" y="410" text-anchor="middle" class="src">Datasheet</text>
-  <text x="543" y="428" text-anchor="middle" class="s">device, memory map,</text>
-  <text x="543" y="444" text-anchor="middle" class="s">what each SFR does</text>
-
-  <rect x="634" y="388" width="146" height="66" rx="8" fill="#fff8c5" stroke="#9a6700" stroke-width="1.5"/>
-  <text x="707" y="410" text-anchor="middle" class="src">Schematic / board</text>
-  <text x="707" y="428" text-anchor="middle" class="s">what each pin drives,</text>
-  <text x="707" y="444" text-anchor="middle" class="s">external chips</text>
-
-  <rect x="798" y="388" width="146" height="66" rx="8" fill="#fff8c5" stroke="#9a6700" stroke-width="1.5"/>
-  <text x="871" y="410" text-anchor="middle" class="src">The firmware</text>
-  <text x="871" y="428" text-anchor="middle" class="s">--suggest drafts pins,</text>
-  <text x="871" y="444" text-anchor="middle" class="s">lint and -j show more</text>
+  <!-- caption -->
+  <text x="450" y="684" text-anchor="middle" class="b" font-style="italic">Most people stop at 1. Everything after it is optional.</text>
 </svg>

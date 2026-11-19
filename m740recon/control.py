@@ -26,8 +26,9 @@ word (.word values), addr (.word pointers, symbol-substituted), or text
 (.ascii).
 `addrtable START [opts]` decodes a table of code pointers: each entry is
 `stride` bytes with the 2-byte pointer at `entryoff`, ending at `end=`,
-`count=`, or `terminator=`; pointers are rendered as .word, traced as code, and
-named `label=`PREFIX + the entry character/index.  User symbols are non-weak:
+`count=`, or `terminator=` (matched against the key byte at `keyoff=`, by
+default the first byte); pointers are rendered as .word, traced as code, and
+named `label=`PREFIX + the entry's key character, or its index.  User symbols are non-weak:
 the automatic symbol generator never overwrites them.
 """
 
@@ -42,11 +43,21 @@ Segment = namedtuple("Segment", "name start end kind path off")
 
 # A table of code pointers.  Each entry is `stride` bytes; the 2-byte little-
 # endian pointer sits at offset `entryoff` within the entry.  The table ends at
-# `end`, after `count` entries, or when the entry's first byte equals
-# `terminator`.  Each pointer is rendered as a .word, traced as code, and (if
-# `label_prefix` is set) the target is named prefix+token(entry).
+# `end`, after `count` entries, or when the entry's key byte equals
+# `terminator`.  The key byte sits at `keyoff` (default: the first byte when
+# the pointer is not, else no key).  Each pointer is rendered as a .word,
+# traced as code, and (if `label_prefix` is set) the target is named
+# prefix+token(entry).
 AddrTable = namedtuple(
-    "AddrTable", "start end count stride entryoff terminator label_prefix names")
+    "AddrTable", "start end count stride entryoff terminator label_prefix names keyoff",
+    defaults=(None,))
+
+
+def _key_offset(tbl):
+    """Offset of an entry's key byte, or None for a dense (unkeyed) table."""
+    if tbl.keyoff is not None:
+        return tbl.keyoff
+    return 0 if tbl.entryoff > 0 else None
 
 # A hardware or flag signal as written in the control file (`pin` / `bit`).
 # `addr` is an int or an unresolved name (an SFR or a label); it is resolved
@@ -134,8 +145,9 @@ class ControlFile(object):
             image[seg.start:seg.end] = chunk
         return image
 
-    def resolve_tables(self, image):
-        """Expand every addrtable against `image`.
+    def resolve_tables(self, image, lo=0, hi=None):
+        """Expand every addrtable against `image`, indexed by absolute address.
+        Only [lo, hi) holds real bytes; a table outside it is an error.
 
         Returns (pointer_addrs, data_addrs, symbols):
           - pointer_addrs: addresses of 2-byte code pointers, to be treated as
@@ -143,43 +155,14 @@ class ControlFile(object):
           - data_addrs: the non-pointer bytes of each entry, to mark as data.
           - symbols: non-weak Symbols naming the pointer targets (first wins).
         """
-        pointer_addrs = []
-        data_addrs = []
-        syms = {}                       # target addr -> Symbol (first writer wins)
-        used_names = set()              # names already taken (must stay unique)
+        # generated names must not repeat a name the file gives elsewhere
+        used = {sym.name for sym in self._symbols_by_addr.values()}
+        hi = len(image) if hi is None else hi
         for tbl in self.addr_tables:
-            addr = tbl.start
-            index = 0
-            while addr + tbl.stride <= len(image):
-                # require the whole entry to fit inside [start, end) so the
-                # pointer read below never crosses end into the next region
-                if tbl.end is not None and addr + tbl.stride > tbl.end:
-                    break
-                if tbl.count is not None and index >= tbl.count:
-                    break
-                if tbl.terminator is not None and image[addr] == tbl.terminator:
-                    break
-                ptr = addr + tbl.entryoff
-                target = image[ptr] | (image[ptr + 1] << 8)
-                pointer_addrs.append(ptr)
-                for da in range(addr, addr + tbl.stride):
-                    if da < ptr or da >= ptr + 2:
-                        data_addrs.append(da)
-                if tbl.label_prefix and target not in syms:
-                    # two entries (here or in another table) can map different
-                    # targets to the same token; keep names unique so the
-                    # listing never emits a duplicate label that as740 rejects
-                    name = tbl.label_prefix + _token(tbl, image[addr], index)
-                    unique = name
-                    suffix = 2
-                    while unique in used_names:
-                        unique = "%s_%d" % (name, suffix)
-                        suffix += 1
-                    used_names.add(unique)
-                    syms[target] = Symbol(target, unique, weak=False)
-                addr += tbl.stride
-                index += 1
-        return pointer_addrs, data_addrs, list(syms.values())
+            if not lo <= tbl.start < hi:
+                raise ControlError("addrtable 0x%04x is outside the image "
+                                   "(0x%04x-0x%04x)" % (tbl.start, lo, hi - 1))
+        return resolve_addr_tables(self.addr_tables, image, used, hi)
 
     @property
     def symbols(self):
@@ -192,13 +175,58 @@ class ControlFile(object):
             self._symbols_by_addr[addr] = Symbol(addr, name, comment, weak=False)
 
 
+def resolve_addr_tables(tables, image, used_names=None, limit=None):
+    """Expand AddrTable records against `image` (see ControlFile.resolve_tables).
+    `used_names` (a set) keeps names unique across several calls; no entry
+    reaches `limit` (default: the end of `image`)."""
+    pointer_addrs = []
+    data_addrs = []
+    syms = {}                       # target addr -> Symbol (first writer wins)
+    used_names = set() if used_names is None else used_names
+    limit = len(image) if limit is None else limit
+    for tbl in tables:
+        addr = tbl.start
+        index = 0
+        while addr + tbl.stride <= limit:
+            # require the whole entry to fit inside [start, end) so the
+            # pointer read below never crosses end into the next region
+            if tbl.end is not None and addr + tbl.stride > tbl.end:
+                break
+            if tbl.count is not None and index >= tbl.count:
+                break
+            koff = _key_offset(tbl) or 0
+            if tbl.terminator is not None and image[addr + koff] == tbl.terminator:
+                break
+            ptr = addr + tbl.entryoff
+            target = image[ptr] | (image[ptr + 1] << 8)
+            pointer_addrs.append(ptr)
+            for da in range(addr, addr + tbl.stride):
+                if da < ptr or da >= ptr + 2:
+                    data_addrs.append(da)
+            if tbl.label_prefix and target not in syms:
+                # two entries (here or in another table) can map different
+                # targets to the same token; keep names unique so the
+                # listing never emits a duplicate label that as740 rejects
+                name = tbl.label_prefix + _token(tbl, image[addr + koff], index)
+                unique = name
+                suffix = 2
+                while unique in used_names:
+                    unique = "%s_%d" % (name, suffix)
+                    suffix += 1
+                used_names.add(unique)
+                syms[target] = Symbol(target, unique, weak=False)
+            addr += tbl.stride
+            index += 1
+    return pointer_addrs, data_addrs, list(syms.values())
+
+
 def _token(tbl, keybyte, index):
     """Name suffix for a table entry: the entry's character if alphanumeric,
     an ASCII mnemonic if names=ascii, else a hex byte (keyed tables) or the
     entry index (dense tables)."""
-    if tbl.entryoff > 0:
+    if _key_offset(tbl) is not None:
         ch = chr(keybyte)
-        if ch.isalnum():
+        if keybyte < 0x80 and ch.isalnum():     # ASCII only: as740 identifiers
             return ch
         if tbl.names == "ascii" and keybyte in _ASCII_NAMES:
             return _ASCII_NAMES[keybyte]
@@ -602,7 +630,8 @@ def _parse_line(cf, raw, lineno, base_dir, source, stack):
                 raise ControlError("line %d: addrtable START [opts]" % lineno)
             start = _parse_int(args[0], lineno)
             opt = {"end": None, "count": None, "stride": 2,
-                   "entryoff": 0, "terminator": None, "label": None, "names": None}
+                   "entryoff": 0, "terminator": None, "label": None, "names": None,
+                   "keyoff": None}
             for kv in args[1:]:
                 if "=" not in kv:
                     raise ControlError("line %d: addrtable option %r needs key=value"
@@ -619,13 +648,20 @@ def _parse_line(cf, raw, lineno, base_dir, source, stack):
             if opt["entryoff"] + 2 > opt["stride"]:
                 raise ControlError(
                     "line %d: addrtable entryoff+2 exceeds stride" % lineno)
+            if opt["keyoff"] is not None and not (
+                    0 <= opt["keyoff"] < opt["stride"]
+                    and opt["keyoff"] not in (opt["entryoff"], opt["entryoff"] + 1)):
+                raise ControlError(
+                    "line %d: addrtable keyoff must be a byte of the entry outside "
+                    "the pointer" % lineno)
             if opt["names"] not in (None, "ascii"):
                 raise ControlError(
                     "line %d: addrtable names=%r unknown (only 'ascii')"
                     % (lineno, opt["names"]))
             cf.addr_tables.append(AddrTable(
                 start, opt["end"], opt["count"], opt["stride"],
-                opt["entryoff"], opt["terminator"], opt["label"], opt["names"]))
+                opt["entryoff"], opt["terminator"], opt["label"], opt["names"],
+                opt["keyoff"]))
 
         else:
             raise ControlError("line %d: unknown directive %r" % (lineno, op))
