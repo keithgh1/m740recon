@@ -153,7 +153,8 @@ def build_disassembly(rom, device, start_address, entry_points=(),
                     end = t.start + (f.records - 1) * t.stride + 2
                     data = [d for d in data if t.start <= d < end]
                 table_ptrs += [p for p in ptrs
-                               if p in traceable_range and p + 1 in traceable_range]
+                               if p in traceable_range
+                               and (p + 1) & 0xFFFF in traceable_range]
                 table_data += data
                 table_syms += syms
             memory = trace(table_ptrs, table_data)
@@ -331,24 +332,32 @@ def place_binary(rom, header, notices, detection):
     return rom, base
 
 
-def fit_control_file(cf, size, base, header, detection):
+def fit_control_file(cf, size, base, header, detection, notices=None):
     """A control file without segments was written against some placement
-    of the binary.  When its addresses lie outside the detected placement
-    but inside the top-of-memory one (where the binary sat before detection
-    existed), use the top of memory.  Entry points and tables must be in
-    the image; labels, comments and ranges count only at or above the
-    detected base, since those below it name RAM or SFRs."""
+    of the binary.  When its entry points, tables and data ranges (which
+    must lie in the image) are outside the detected placement but inside
+    the top-of-memory one (where the binary sat before detection existed),
+    use the top of memory.  Labels and comments can name memory outside the
+    image, so they never move it; when those at or above the detected base
+    fit only the top-of-memory placement, a notice says so."""
     top = 0x10000 - size
-    soft = [sym.address for sym in cf.symbols] + list(cf.comments)
+    addrs = list(cf.entry_points) + [t.start for t in cf.addr_tables]
     for start, end, _ in cf.ranges:
-        soft.extend((start, end - 1))
-    addrs = (list(cf.entry_points) + [t.start for t in cf.addr_tables]
-             + [a for a in soft if a >= min(base, top)])
+        addrs.extend((start, end - 1))
 
-    def covers(b):
-        return all(b <= a < b + size for a in addrs)
+    def covers(b, where=addrs):
+        return all(b <= a < b + size for a in where)
 
     if not addrs or base == top or covers(base) or not covers(top):
+        if base != top and notices is not None and covers(base):
+            soft = [sym.address for sym in cf.symbols] + list(cf.comments)
+            soft = [a for a in soft if a >= base]
+            if soft and not covers(base, soft) and covers(top, soft):
+                notices.append(
+                    "the control file names 0x%04x, outside the image at "
+                    "0x%04x-0x%04x.  If it was written for the top of memory, "
+                    "add: segment rom 0x%04x 0x10000 FILE"
+                    % (max(soft), base, base + size - 1, top))
         return base
     reason = ("the control file's addresses lie there, not at the "
               "detected 0x%04x" % base)
@@ -653,7 +662,7 @@ def main():
             rom, start_address = place_binary(rom, header, notices, detection)
             if cf is not None:
                 start_address = fit_control_file(cf, len(rom), start_address,
-                                                 header, detection)
+                                                 header, detection, notices)
             bank = detection.get("bank")
             placed = [(args[0], start_address, len(rom),
                        int(bank["file_offset"], 16) if bank else 0)]

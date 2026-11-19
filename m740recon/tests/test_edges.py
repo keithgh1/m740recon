@@ -165,6 +165,20 @@ class DraftSourceTests(unittest.TestCase):
         [seg] = control.parse("segment rom 0x8000 0x10000 %s\n" % tok).segments
         self.assertEqual(seg.path, "/roms/a\\b.bin")
 
+    def test_line_break_in_a_name_leaves_a_placeholder(self):
+        from unittest import mock
+        img = _search_rom([], _KEY_FIRST)
+        real = os.path.abspath
+        fake = lambda p: "/roms/a\nb.bin" if p.endswith("rom.bin") else real(p)
+        with mock.patch.object(suggest.os.path, "abspath", fake):
+            code, out, err = _cli(["--suggest", "-m", "M50734"], [("rom.bin", img)])
+        self.assertEqual(code, 0, err)
+        [line] = [l for l in out.splitlines() if l.startswith("# segment rom ")]
+        self.assertIn("FILE@0x0", line)
+        self.assertIn("line break", line)
+        self.assertNotIn("b.bin", out)
+        control.parse(out)
+
     def test_plain_path_is_not_quoted(self):
         self.assertFalse(suggest._source("rom.bin", 0).startswith('"'))
 
@@ -215,6 +229,16 @@ class TraceEdgeTests(unittest.TestCase):
         self.assertFalse(mem.is_vector_start(0xFFFE))
         self.assertFalse(mem.is_instruction_start(0x8000))
 
+    def test_vector_may_wrap_to_zero(self):
+        rom = bytearray(b"\xff" * 0x10000)
+        rom[0xFFFF], rom[0x0000] = 0x00, 0x80              # word at 0xffff -> 0x8000
+        rom[0x8000] = 0x60
+        mem, _ = command.build_disassembly(rom, "M50734", 0, vectors_extra=[0xFFFF],
+                                           trace_ranges=[(0x0000, 0x0001), (0x8000, 0x8001),
+                                                         (0xFFFF, 0x10000)])
+        self.assertTrue(mem.is_vector_start(0xFFFF))
+        self.assertTrue(mem.is_instruction_start(0x8000))
+
 
 class ControlPlacementTests(unittest.TestCase):
     def _cf(self, text):
@@ -233,23 +257,35 @@ class ControlPlacementTests(unittest.TestCase):
         base = command.fit_control_file(cf, 0x2000, 0x1000, [], {})
         self.assertEqual(base, 0x1000)
 
-    def test_labels_pull_the_image_to_the_top(self):
-        cf = self._cf("label 0x0040 flags\nlabel 0xf123 main\nrange 0xf800 0xf810 text\n")
-        detection = {}
-        self.assertEqual(command.fit_control_file(cf, 0x2000, 0x1000, [], detection), 0xE000)
+    def _fit(self, text):
+        notices, detection = [], {}
+        base = command.fit_control_file(self._cf(text), 0x2000, 0x1000, [], detection, notices)
+        return base, notices, detection
+
+    def test_range_pulls_the_image_to_the_top(self):
+        base, notices, detection = self._fit("label 0x0040 flags\nrange 0xf800 0xf810 text\n")
+        self.assertEqual(base, 0xE000)
         self.assertEqual(detection["base"]["method"], "control")
 
-    def test_comment_pulls_the_image_to_the_top(self):
-        cf = self._cf('comment 0xf123 "here"\n')
-        self.assertEqual(command.fit_control_file(cf, 0x2000, 0x1000, [], {}), 0xE000)
+    def test_high_labels_keep_the_base_with_a_notice(self):
+        base, notices, _ = self._fit("label 0x0040 flags\nlabel 0xf123 io_port\n")
+        self.assertEqual(base, 0x1000)
+        [note] = notices
+        self.assertIn("0xf123", note)
+        self.assertIn("segment rom 0xe000 0x10000", note)
+
+    def test_high_comment_keeps_the_base_with_a_notice(self):
+        base, notices, _ = self._fit('comment 0xf123 "here"\n')
+        self.assertEqual(base, 0x1000)
+        self.assertEqual(len(notices), 1)
 
     def test_ram_labels_keep_the_detected_base(self):
-        cf = self._cf("label 0x0040 flags\nlabel 0x0200 buf\n")
-        self.assertEqual(command.fit_control_file(cf, 0x2000, 0x1000, [], {}), 0x1000)
+        base, notices, _ = self._fit("label 0x0040 flags\nlabel 0x0200 buf\n")
+        self.assertEqual((base, notices), (0x1000, []))
 
     def test_labels_inside_the_detected_image_keep_it(self):
-        cf = self._cf("label 0x1100 main\nlabel 0xf123 io_port\n")
-        self.assertEqual(command.fit_control_file(cf, 0x2000, 0x1000, [], {}), 0x1000)
+        base, notices, _ = self._fit("label 0x1100 main\nlabel 0xf123 io_port\n")
+        self.assertEqual((base, notices), (0x1000, []))
 
     def test_entry_outside_any_placement_is_a_clean_error(self):
         data = bytes([0x60] * 0x7FFE + [0x00, 0x80])

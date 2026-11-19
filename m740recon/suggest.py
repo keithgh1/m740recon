@@ -76,10 +76,14 @@ def build(cf, device, device_given, detection, memory, placed,
         files = detection.get("files") or [detection.get("base", {})]
         for n, ((path, base, size, off), info) in enumerate(zip(placed, files)):
             name = "rom" if len(placed) == 1 else "rom%d" % (n + 1)
-            seg = "segment %s 0x%04x 0x%05x %s" % (name, base, base + size,
-                                               _source(path, off))
+            # a control-file line cannot hold a line break
+            broken = len(os.path.abspath(path).splitlines()) > 1
+            src = "FILE@0x%x" % off if broken else _source(path, off)
+            seg = "segment %s 0x%04x 0x%05x %s" % (name, base, base + size, src)
             why = ("load address: %s.  Uncomment to fix the memory map; then run "
                    "without the binary argument" % info.get("reason", ""))
+            if broken:
+                why += ".  The file name has a line break: rename it and put its path at FILE"
             out.append(_line(seg, info.get("confidence", "medium"), why, live=False))
     for u in detection.get("unmapped", []):
         out.append(_line("segment other %s %s OTHER_ROM.bin@0x0" % (u["from"], "0x%04x" % (int(u["to"], 16) + 1)),

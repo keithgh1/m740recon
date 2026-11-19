@@ -107,7 +107,7 @@ Only the keys for what was actually inferred are present.  Addresses are hex str
 
 | Key | Content |
 |---|---|
-| `base` | `address`, `method` (`vote`, `vectors`, `fills`, `assumed`, `control`: placed where the control file's addresses lie), `confidence`, `reason` |
+| `base` | `address`, `method` (`vote`, `vectors`, `fills`, `assumed`, `control`: placed where the control file's entry points, tables and ranges lie), `confidence`, `reason` |
 | `files` | several binaries: per file `path`, `base`, `size`, `confidence`, `reason` |
 | `bank` | a file over 64 KiB: `file_offset` and `size` of the bank used |
 | `device` | `name`, `confidence`, `reason`, `runner_up`, `fits` (false: does not look like 740 code) |

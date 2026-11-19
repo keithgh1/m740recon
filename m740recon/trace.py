@@ -327,7 +327,7 @@ class Tracer(object):
 
     def enqueue_vector(self, address):
         if (address not in self.traceable_range or
-                address + 1 not in self.traceable_range):
+                (address + 1) & 0xFFFF not in self.traceable_range):
             return
         # respect a control-file range that already typed these two bytes as
         # data/word/text: don't reclassify them as a vector or trace through them
