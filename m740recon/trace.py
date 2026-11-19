@@ -63,6 +63,9 @@ class Tracer(object):
             inst_len = len(inst)
             if (ps.pc + inst_len) >= mem_len:
                 continue  # ignore instruction that would wrap around memory
+            if any((ps.pc + k) not in self.traceable_range
+                   for k in range(1, inst_len)):
+                continue  # operand bytes would come from outside the image
 
             if self.memory.is_instruction_start(ps.pc):
                 # tracing previously seen instruction with new processor state
@@ -323,7 +326,8 @@ class Tracer(object):
             self.enqueue_processor_state(ps)
 
     def enqueue_vector(self, address):
-        if address not in self.traceable_range:
+        if (address not in self.traceable_range or
+                address + 1 not in self.traceable_range):
             return
         # respect a control-file range that already typed these two bytes as
         # data/word/text: don't reclassify them as a vector or trace through them

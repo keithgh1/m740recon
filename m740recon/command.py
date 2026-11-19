@@ -152,7 +152,8 @@ def build_disassembly(rom, device, start_address, entry_points=(),
                     t = f.table
                     end = t.start + (f.records - 1) * t.stride + 2
                     data = [d for d in data if t.start <= d < end]
-                table_ptrs += [p for p in ptrs if p in traceable_range]
+                table_ptrs += [p for p in ptrs
+                               if p in traceable_range and p + 1 in traceable_range]
                 table_data += data
                 table_syms += syms
             memory = trace(table_ptrs, table_data)
@@ -332,18 +333,24 @@ def place_binary(rom, header, notices, detection):
 
 def fit_control_file(cf, size, base, header, detection):
     """A control file without segments was written against some placement
-    of the binary.  When its entry points and tables lie outside the
-    detected placement but inside the top-of-memory one (where the binary
-    sat before detection existed), use the top of memory."""
-    addrs = list(cf.entry_points) + [t.start for t in cf.addr_tables]
+    of the binary.  When its addresses lie outside the detected placement
+    but inside the top-of-memory one (where the binary sat before detection
+    existed), use the top of memory.  Entry points and tables must be in
+    the image; labels, comments and ranges count only at or above the
+    detected base, since those below it name RAM or SFRs."""
     top = 0x10000 - size
+    soft = [sym.address for sym in cf.symbols] + list(cf.comments)
+    for start, end, _ in cf.ranges:
+        soft.extend((start, end - 1))
+    addrs = (list(cf.entry_points) + [t.start for t in cf.addr_tables]
+             + [a for a in soft if a >= min(base, top)])
 
     def covers(b):
         return all(b <= a < b + size for a in addrs)
 
     if not addrs or base == top or covers(base) or not covers(top):
         return base
-    reason = ("the control file's entry points and tables lie there, not at the "
+    reason = ("the control file's addresses lie there, not at the "
               "detected 0x%04x" % base)
     header[:] = [h for h in header if not h.startswith("base ")]
     header.append("base    0x%04x   from the control file: %s" % (top, reason))

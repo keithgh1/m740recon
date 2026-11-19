@@ -157,6 +157,14 @@ class DraftSourceTests(unittest.TestCase):
         self.assertTrue(seg.path.endswith("a dir/rom#1.bin"))
         self.assertEqual(seg.off, 0x10)
 
+    def test_backslash_in_a_posix_name_is_kept(self):
+        from unittest import mock
+        with mock.patch.object(suggest.os, "sep", "/"), \
+                mock.patch.object(suggest.os.path, "abspath", lambda p: p):
+            tok = suggest._source("/roms/a\\b.bin", 0)
+        [seg] = control.parse("segment rom 0x8000 0x10000 %s\n" % tok).segments
+        self.assertEqual(seg.path, "/roms/a\\b.bin")
+
     def test_plain_path_is_not_quoted(self):
         self.assertFalse(suggest._source("rom.bin", 0).startswith('"'))
 
@@ -185,6 +193,29 @@ class PaddingTests(unittest.TestCase):
         self.assertFalse(mem.is_instruction_start(0xD000))
 
 
+class TraceEdgeTests(unittest.TestCase):
+    def _rom(self):
+        rom = bytearray(b"\xff" * 0x8000)
+        rom[0:4] = bytes([0xEA, 0xAD, 0x00, 0x90])        # nop / lda $9000
+        rom[0x7FFE], rom[0x7FFF] = 0x00, 0x80
+        return bytes(rom)
+
+    def test_instruction_must_end_inside_the_image(self):
+        mem, _ = command.build_disassembly(self._rom(), "M50734", 0x8000,
+                                           trace_ranges=[(0x8000, 0x8004), (0xFFFE, 0x10000)])
+        self.assertTrue(mem.is_instruction_start(0x8001))
+        mem, _ = command.build_disassembly(self._rom(), "M50734", 0x8000,
+                                           trace_ranges=[(0x8000, 0x8002), (0xFFFE, 0x10000)])
+        self.assertTrue(mem.is_instruction_start(0x8000))
+        self.assertFalse(mem.is_instruction_start(0x8001))
+
+    def test_vector_must_end_inside_the_image(self):
+        mem, _ = command.build_disassembly(self._rom(), "M50734", 0x8000,
+                                           trace_ranges=[(0x8000, 0x8004), (0xFFFE, 0xFFFF)])
+        self.assertFalse(mem.is_vector_start(0xFFFE))
+        self.assertFalse(mem.is_instruction_start(0x8000))
+
+
 class ControlPlacementTests(unittest.TestCase):
     def _cf(self, text):
         return control.parse(text)
@@ -201,6 +232,24 @@ class ControlPlacementTests(unittest.TestCase):
         cf = self._cf("entry 0x1100 main\n")
         base = command.fit_control_file(cf, 0x2000, 0x1000, [], {})
         self.assertEqual(base, 0x1000)
+
+    def test_labels_pull_the_image_to_the_top(self):
+        cf = self._cf("label 0x0040 flags\nlabel 0xf123 main\nrange 0xf800 0xf810 text\n")
+        detection = {}
+        self.assertEqual(command.fit_control_file(cf, 0x2000, 0x1000, [], detection), 0xE000)
+        self.assertEqual(detection["base"]["method"], "control")
+
+    def test_comment_pulls_the_image_to_the_top(self):
+        cf = self._cf('comment 0xf123 "here"\n')
+        self.assertEqual(command.fit_control_file(cf, 0x2000, 0x1000, [], {}), 0xE000)
+
+    def test_ram_labels_keep_the_detected_base(self):
+        cf = self._cf("label 0x0040 flags\nlabel 0x0200 buf\n")
+        self.assertEqual(command.fit_control_file(cf, 0x2000, 0x1000, [], {}), 0x1000)
+
+    def test_labels_inside_the_detected_image_keep_it(self):
+        cf = self._cf("label 0x1100 main\nlabel 0xf123 io_port\n")
+        self.assertEqual(command.fit_control_file(cf, 0x2000, 0x1000, [], {}), 0x1000)
 
     def test_entry_outside_any_placement_is_a_clean_error(self):
         data = bytes([0x60] * 0x7FFE + [0x00, 0x80])

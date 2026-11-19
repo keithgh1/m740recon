@@ -29,9 +29,12 @@ def _line(directive, conf, reason, live=True, width=46):
 def _source(path, off):
     """A segment SOURCE token for `path`: absolute, since the draft may be
     saved anywhere, and quoted when the control-file tokenizer needs it."""
-    tok = "%s@0x%x" % (os.path.abspath(path).replace("\\", "/"), off)
-    if any(c.isspace() or c in "#\"'" for c in tok):
-        tok = '"%s"' % tok.replace('"', '\\"')
+    path = os.path.abspath(path)
+    if os.sep == "\\":
+        path = path.replace("\\", "/")    # Windows accepts '/'; '\' escapes
+    tok = "%s@0x%x" % (path, off)
+    if any(c.isspace() or c in "#\"'\\" for c in tok):
+        tok = '"%s"' % tok.replace("\\", "\\\\").replace('"', '\\"')
     return tok
 
 
